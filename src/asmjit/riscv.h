@@ -9,5 +9,7 @@
 #include "./core.h"
 #include "./riscv/riscvoperand.h"
 #include "./riscv/riscvemitter.h"
+#include "./riscv/riscvinstdb.h"
+#include "./riscv/riscvcompiler.h"
 
 #endif // ASMJIT_RISCV_H_INCLUDED

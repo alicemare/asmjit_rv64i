@@ -506,7 +506,12 @@ set(ASMJIT_SRC_LIST
   asmjit/riscv/riscvoperand.cpp
   asmjit/riscv/riscvoperand.h
   asmjit/riscv/riscvemitter.h
-
+  asmjit/riscv/riscvinstdb.cpp
+  asmjit/riscv/riscvinstdb.h
+  asmjit/riscv/riscvcompiler.h
+  asmjit/riscv/riscvcompiler.cpp
+  asmjit/riscv/riscvrapass_p.h
+  asmjit/riscv/riscvrapass.cpp
   asmjit/x86.h
   asmjit/x86/x86archtraits_p.h
   asmjit/x86/x86assembler.cpp
