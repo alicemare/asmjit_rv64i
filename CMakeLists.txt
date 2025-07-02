@@ -62,6 +62,10 @@ if (NOT DEFINED ASMJIT_NO_AARCH64)
   set(ASMJIT_NO_AARCH64 FALSE)
 endif()
 
+if (NOT DEFINED ASMJIT_NO_RISCV)
+  set(ASMJIT_NO_RISCV FALSE)
+endif()
+
 if (NOT DEFINED ASMJIT_NO_FOREIGN)
   set(ASMJIT_NO_FOREIGN FALSE)
 endif()
@@ -118,6 +122,7 @@ set(ASMJIT_NO_CUSTOM_FLAGS  "${ASMJIT_NO_CUSTOM_FLAGS}"  CACHE BOOL "Disable ext
 
 set(ASMJIT_NO_X86           "${ASMJIT_NO_X86}"           CACHE BOOL "Disable X86/X64 backend")
 set(ASMJIT_NO_AARCH64       "${ASMJIT_NO_AARCH64}"       CACHE BOOL "Disable AArch64 backend")
+set(ASMJIT_NO_RISCV         "${ASMJIT_NO_RISCV}"         CACHE BOOL "Disable RISC-V backend")
 set(ASMJIT_NO_FOREIGN       "${ASMJIT_NO_FOREIGN}"       CACHE BOOL "Disable all foreign architectures (enables only a target architecture)")
 
 set(ASMJIT_NO_DEPRECATED    "${ASMJIT_NO_DEPRECATED}"    CACHE BOOL "Disable deprecated API at build time")
@@ -343,6 +348,7 @@ foreach(build_option # AsmJit build options.
                      # AsmJit backends selection.
                      ASMJIT_NO_X86
                      ASMJIT_NO_AARCH64
+                     ASMJIT_NO_RISCV
                      ASMJIT_NO_FOREIGN
                      # AsmJit features selection.
                      ASMJIT_NO_SHM_OPEN
@@ -495,6 +501,11 @@ set(ASMJIT_SRC_LIST
   asmjit/arm/a64operand.h
   asmjit/arm/a64rapass.cpp
   asmjit/arm/a64rapass_p.h
+
+  asmjit/riscv.h
+  asmjit/riscv/riscvoperand.cpp
+  asmjit/riscv/riscvoperand.h
+  asmjit/riscv/riscvemitter.h
 
   asmjit/x86.h
   asmjit/x86/x86archtraits_p.h
