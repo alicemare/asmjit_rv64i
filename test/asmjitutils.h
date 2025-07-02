@@ -117,6 +117,12 @@ static void printBuildOptions() {
   constexpr bool no_aarch64 = false;
 #endif
 
+#if defined(ASMJIT_NO_RISCV)
+  constexpr bool no_riscv = true;
+#else
+  constexpr bool no_riscv = false;
+#endif
+
 #if defined(ASMJIT_NO_FOREIGN)
   constexpr bool no_foreign = true;
 #else
@@ -192,6 +198,7 @@ static void printBuildOptions() {
   printf("Build Backends:\n");
   printf("  ASMJIT_NO_X86          : %s\n", stringifyBuildDefinition(no_x86));
   printf("  ASMJIT_NO_AARCH64      : %s\n", stringifyBuildDefinition(no_aarch64));
+  printf("  ASMJIT_NO_RISCV        : %s\n", stringifyBuildDefinition(no_riscv));
   printf("  ASMJIT_NO_FOREIGN      : %s\n", stringifyBuildDefinition(no_foreign));
   printf("\n");
 

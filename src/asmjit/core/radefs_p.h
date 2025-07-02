@@ -81,6 +81,24 @@ public:
         return kErrorOk;
       }
 
+      case Arch::kRISCV64: {
+        // RISC-V has 32 integer registers (x0-x31)    
+        // Available registers for allocation:
+        // - Exclude x0 (zero register)
+        // - Include x1 (ra register)
+        // - Exclude x2 (stack pointer)
+        // - Exclude x3 (global pointer) - typically reserved
+        // - Exclude x4 (thread pointer) - typically reserved
+        // - Include x5-x31 (all other registers)
+
+        _availableRegs[RegGroup::kGp] = 0xFFFFFFFFu & ~Support::bitMask(0, 1, 2, 3, 4);
+        
+        // RV64I doesn't have vector registers, so set to 0
+        _availableRegs[RegGroup::kVec] = 0;
+        _availableRegs[RegGroup::kMask] = 0;
+        _availableRegs[RegGroup::kExtraVirt3] = 0;
+        return kErrorOk;
+      }
       default:
         return DebugUtils::errored(kErrorInvalidArch);
     }

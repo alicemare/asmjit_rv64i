@@ -24,6 +24,10 @@
   #include "../arm/a64formatter_p.h"
 #endif
 
+#if !defined(ASMJIT_NO_RISCV)
+  #include "../riscv/riscvformatter_p.h"
+#endif
+
 ASMJIT_BEGIN_NAMESPACE
 
 #if defined(ASMJIT_NO_COMPILER)
@@ -136,6 +140,12 @@ Error formatFeature(
   }
 #endif
 
+#if !defined(ASMJIT_NO_RISCV)
+  if (Environment::isFamilyRISCV(arch)) {
+    return riscv::FormatterInternal::formatFeature(sb, featureId);
+  }
+#endif
+
   return kErrorInvalidArch;
 }
 
@@ -199,6 +209,12 @@ Error formatRegister(
   }
 #endif
 
+#if !defined(ASMJIT_NO_RISCV)
+  if (Environment::isFamilyRISCV(arch)) {
+    return riscv::FormatterInternal::formatRegister(sb, formatFlags, emitter, arch, regType, regId);
+  }
+#endif
+
   return kErrorInvalidArch;
 }
 
@@ -218,6 +234,12 @@ Error formatOperand(
 #if !defined(ASMJIT_NO_AARCH64)
   if (Environment::isFamilyARM(arch)) {
     return arm::FormatterInternal::formatOperand(sb, formatFlags, emitter, arch, op);
+  }
+#endif
+
+#if !defined(ASMJIT_NO_RISCV)
+  if (Environment::isFamilyRISCV(arch)) {
+    return riscv::FormatterInternal::formatOperand(sb, formatFlags, emitter, arch, op);
   }
 #endif
 
@@ -324,6 +346,12 @@ Error formatInstruction(
 #if !defined(ASMJIT_NO_AARCH64)
   if (Environment::isFamilyAArch64(arch)) {
     return a64::FormatterInternal::formatInstruction(sb, formatFlags, emitter, arch, inst, operands, opCount);
+  }
+#endif
+
+#if !defined(ASMJIT_NO_RISCV)
+  if (Environment::isFamilyRISCV(arch)) {
+    return riscv::FormatterInternal::formatInstruction(sb, formatFlags, emitter, arch, inst, operands, opCount);
   }
 #endif
 

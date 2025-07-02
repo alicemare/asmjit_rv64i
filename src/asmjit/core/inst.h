@@ -26,6 +26,7 @@ ASMJIT_BEGIN_NAMESPACE
 //!
 //!   - \ref x86::Inst (X86 and X86_64)
 //!   - \ref a64::Inst (AArch64)
+//!   - \ref rv64::Inst (RISCV)
 using InstId = uint32_t;
 
 //! Instruction id parts.

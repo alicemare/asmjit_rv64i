@@ -1,0 +1,106 @@
+{
+  "registers": {
+    "x": { "kind": "gp", "any": "x", "names": ["x0-31"] }
+  },
+  "instructions": [
+    {
+      "category": "RV32I Base",
+      "data": [
+        {"inst": "lui xd, imm"       , "op": "imm_u|xd|0110111"},
+        {"inst": "auipc xd, imm"     , "op": "imm_u|xd|0010111"},
+        {"inst": "jal xd, imm"       , "op": "imm_j|xd|1101111", "control": "jump"},
+        {"inst": "jalr xd, xs1, imm" , "op": "imm_i|xs1|000|xd|1100111", "control": "jump"}
+      ]
+    },
+    {
+      "category": "RV32I Branch",
+      "data": [
+        {"inst": "beq xgs1, xs2, imm" , "op": "imm_b_hi|xs2|xs1|000|imm_b_lo|1100011", "control": "branch"},
+        {"inst": "bne xs1, xs2, imm" , "op": "imm_b_hi|xs2|xs1|001|imm_b_lo|1100011", "control": "branch"},
+        {"inst": "blt xs1, xs2, imm" , "op": "imm_b_hi|xs2|xs1|100|imm_b_lo|1100011", "control": "branch"},
+        {"inst": "bge xs1, xs2, imm" , "op": "imm_b_hi|xs2|xs1|101|imm_b_lo|1100011", "control": "branch"},
+        {"inst": "bltu xs1, xs2, imm", "op": "imm_b_hi|xs2|xs1|110|imm_b_lo|1100011", "control": "branch"},
+        {"inst": "bgeu xs1, xs2, imm", "op": "imm_b_hi|xs2|xs1|111|imm_b_lo|1100011", "control": "branch"}
+      ]
+    },
+    {
+      "category": "RV32I Load",
+      "data": [
+        {"inst": "lb xd, imm(xs1)"   , "op": "imm_i|xs1|000|xd|0000011"},
+        {"inst": "lh xd, imm(xs1)"   , "op": "imm_i|xs1|001|xd|0000011"},
+        {"inst": "lw xd, imm(xs1)"   , "op": "imm_i|xs1|010|xd|0000011"},
+        {"inst": "lbu xd, imm(xs1)"  , "op": "imm_i|xs1|100|xd|0000011"},
+        {"inst": "lhu xd, imm(xs1)"  , "op": "imm_i|xs1|101|xd|0000011"}
+      ]
+    },
+    {
+      "category": "RV32I Store",
+      "data": [
+        {"inst": "sb xs2, imm(xs1)"  , "op": "imm_s_hi|xs2|xs1|000|imm_s_lo|0100011"},
+        {"inst": "sh xs2, imm(xs1)"  , "op": "imm_s_hi|xs2|xs1|001|imm_s_lo|0100011"},
+        {"inst": "sw xs2, imm(xs1)"  , "op": "imm_s_hi|xs2|xs1|010|imm_s_lo|0100011"}
+      ]
+    },
+    {
+      "category": "RV32I ALU Immediate",
+      "data": [
+        {"inst": "addi xd, xs1, imm" , "op": "imm_i|xs1|000|xd|0010011"},
+        {"inst": "slti xd, xs1, imm" , "op": "imm_i|xs1|010|xd|0010011"},
+        {"inst": "sltiu xd, xs1, imm", "op": "imm_i|xs1|011|xd|0010011"},
+        {"inst": "xori xd, xs1, imm" , "op": "imm_i|xs1|100|xd|0010011"},
+        {"inst": "ori xd, xs1, imm"  , "op": "imm_i|xs1|110|xd|0010011"},
+        {"inst": "andi xd, xs1, imm" , "op": "imm_i|xs1|111|xd|0010011"}
+      ]
+    },
+    {
+      "category": "RV32I Shift Immediate",
+      "data": [
+        {"inst": "slli xd, xs1, shamt", "op": "0000000|shamt|xs1|001|xd|0010011"},
+        {"inst": "srli xd, xs1, shamt", "op": "0000000|shamt|xs1|101|xd|0010011"},
+        {"inst": "srai xd, xs1, shamt", "op": "0100000|shamt|xs1|101|xd|0010011"}
+      ]
+    },
+    {
+      "category": "RV32I ALU",
+      "data": [
+        {"inst": "add xd, xs1, xs2"  , "op": "0000000|xs2|xs1|000|xd|0110011"},
+        {"inst": "sub xd, xs1, xs2"  , "op": "0100000|xs2|xs1|000|xd|0110011"},
+        {"inst": "sll xd, xs1, xs2"  , "op": "0000000|xs2|xs1|001|xd|0110011"},
+        {"inst": "slt xd, xs1, xs2"  , "op": "0000000|xs2|xs1|010|xd|0110011"},
+        {"inst": "sltu xd, xs1, xs2" , "op": "0000000|xs2|xs1|011|xd|0110011"},
+        {"inst": "xor xd, xs1, xs2"  , "op": "0000000|xs2|xs1|100|xd|0110011"},
+        {"inst": "srl xd, xs1, xs2"  , "op": "0000000|xs2|xs1|101|xd|0110011"},
+        {"inst": "sra xd, xs1, xs2"  , "op": "0100000|xs2|xs1|101|xd|0110011"},
+        {"inst": "or xd, xs1, xs2"   , "op": "0000000|xs2|xs1|110|xd|0110011"},
+        {"inst": "and xd, xs1, xs2"  , "op": "0000000|xs2|xs1|111|xd|0110011"}
+      ]
+    },
+    {
+      "category": "RV64I Load/Store",
+      "data": [
+        {"inst": "lwu xd, imm(xs1)"  , "op": "imm_i|xs1|110|xd|0000011"},
+        {"inst": "ld xd, imm(xs1)"   , "op": "imm_i|xs1|011|xd|0000011"},
+        {"inst": "sd xs2, imm(xs1)"  , "op": "imm_s_hi|xs2|xs1|011|imm_s_lo|0100011"}
+      ]
+    },
+    {
+      "category": "RV64I ALU Immediate",
+      "data": [
+        {"inst": "addiw xd, xs1, imm", "op": "imm_i|xs1|000|xd|0011011"},
+        {"inst": "slliw xd, xs1, shamt", "op": "0000000|shamt|xs1|001|xd|0011011"},
+        {"inst": "srliw xd, xs1, shamt", "op": "0000000|shamt|xs1|101|xd|0011011"},
+        {"inst": "sraiw xd, xs1, shamt", "op": "0100000|shamt|xs1|101|xd|0011011"}
+      ]
+    },
+    {
+      "category": "RV64I ALU",
+      "data": [
+        {"inst": "addw xd, xs1, xs2" , "op": "0000000|xs2|xs1|000|xd|0111011"},
+        {"inst": "subw xd, xs1, xs2" , "op": "0100000|xs2|xs1|000|xd|0111011"},
+        {"inst": "sllw xd, xs1, xs2" , "op": "0000000|xs2|xs1|001|xd|0111011"},
+        {"inst": "srlw xd, xs1, xs2" , "op": "0000000|xs2|xs1|101|xd|0111011"},
+        {"inst": "sraw xd, xs1, xs2" , "op": "0100000|xs2|xs1|101|xd|0111011"}
+      ]
+    }
+  ]
+}

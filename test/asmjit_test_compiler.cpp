@@ -31,6 +31,11 @@
   void compiler_add_a64_tests(TestApp& app);
 #endif // !ASMJIT_NO_AARCH64
 
+#if !defined(ASMJIT_NO_RISCV)
+  #include <asmjit/riscv.h>
+  void compiler_add_riscv_tests(TestApp& app);
+#endif // !ASMJIT_NO_RISCV
+
 using namespace asmjit;
 
 int TestApp::handleArgs(int argc, const char* const* argv) {
@@ -160,6 +165,10 @@ int TestApp::run() {
             if (strcmp(_arch, "aarch64") == 0)
               break;
             continue;
+          case Arch::kRISCV64:
+            if (strcmp(_arch, "riscv") == 0)
+              break;
+            continue;
           default:
             continue;
         }
@@ -209,6 +218,10 @@ int TestApp::run() {
                          CpuFeatures::ARM::kIDIVT,
                          CpuFeatures::ARM::kPMULL);
             break;
+          case Arch::kRISCV64:
+            features.add(CpuFeatures::RISCV::kRV32I,
+                         CpuFeatures::RISCV::kRV64I);
+            break;
 
           default:
             break;
@@ -252,6 +265,11 @@ int TestApp::run() {
       if (code.arch() == Arch::kAArch64)
         cc = std::unique_ptr<a64::Compiler>(new a64::Compiler(&code));
 #endif // !ASMJIT_NO_AARCH64
+
+#ifndef ASMJIT_NO_RISCV
+      if (code.arch() == Arch::kRISCV64)
+        cc = std::unique_ptr<riscv::Compiler>(new riscv::Compiler(&code));
+#endif // !ASMJIT_NO_RISCV
 
       if (!cc)
         continue;
@@ -391,6 +409,10 @@ int main(int argc, char* argv[]) {
 #if !defined(ASMJIT_NO_AARCH64)
   compiler_add_a64_tests(app);
 #endif // !ASMJIT_NO_AARCH64
+
+#if !defined(ASMJIT_NO_RISCV)
+  compiler_add_riscv_tests(app);
+#endif // !ASMJIT_NO_RISCV
 
   return app.run();
 }

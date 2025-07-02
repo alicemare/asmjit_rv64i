@@ -62,6 +62,10 @@ if (NOT DEFINED ASMJIT_NO_AARCH64)
   set(ASMJIT_NO_AARCH64 FALSE)
 endif()
 
+if (NOT DEFINED ASMJIT_NO_RISCV)
+  set(ASMJIT_NO_RISCV FALSE)
+endif()
+
 if (NOT DEFINED ASMJIT_NO_FOREIGN)
   set(ASMJIT_NO_FOREIGN FALSE)
 endif()
@@ -118,6 +122,7 @@ set(ASMJIT_NO_CUSTOM_FLAGS  "${ASMJIT_NO_CUSTOM_FLAGS}"  CACHE BOOL "Disable ext
 
 set(ASMJIT_NO_X86           "${ASMJIT_NO_X86}"           CACHE BOOL "Disable X86/X64 backend")
 set(ASMJIT_NO_AARCH64       "${ASMJIT_NO_AARCH64}"       CACHE BOOL "Disable AArch64 backend")
+set(ASMJIT_NO_RISCV         "${ASMJIT_NO_RISCV}"         CACHE BOOL "Disable RISC-V backend")
 set(ASMJIT_NO_FOREIGN       "${ASMJIT_NO_FOREIGN}"       CACHE BOOL "Disable all foreign architectures (enables only a target architecture)")
 
 set(ASMJIT_NO_DEPRECATED    "${ASMJIT_NO_DEPRECATED}"    CACHE BOOL "Disable deprecated API at build time")
@@ -343,6 +348,7 @@ foreach(build_option # AsmJit build options.
                      # AsmJit backends selection.
                      ASMJIT_NO_X86
                      ASMJIT_NO_AARCH64
+                     ASMJIT_NO_RISCV
                      ASMJIT_NO_FOREIGN
                      # AsmJit features selection.
                      ASMJIT_NO_SHM_OPEN
@@ -496,6 +502,27 @@ set(ASMJIT_SRC_LIST
   asmjit/arm/a64rapass.cpp
   asmjit/arm/a64rapass_p.h
 
+  asmjit/riscv.h
+  asmjit/riscv/riscvoperand.cpp
+  asmjit/riscv/riscvoperand.h
+  asmjit/riscv/riscvemitter.h
+  asmjit/riscv/riscvinstdb.cpp
+  asmjit/riscv/riscvinstdb.h
+  asmjit/riscv/riscvassembler.h
+  asmjit/riscv/riscvassembler.cpp
+  asmjit/riscv/riscvcompiler.h
+  asmjit/riscv/riscvcompiler.cpp
+  asmjit/riscv/riscvrapass_p.h
+  asmjit/riscv/riscvrapass.cpp
+  asmjit/riscv/riscvemithelper_p.h
+  asmjit/riscv/riscvemithelper.cpp
+  asmjit/riscv/riscvinstapi_p.h
+  asmjit/riscv/riscvinstapi.cpp
+  asmjit/riscv/riscvfunc_p.h
+  asmjit/riscv/riscvfunc.cpp
+  asmjit/riscv/riscvformatter_p.h
+  asmjit/riscv/riscvformatter.cpp
+
   asmjit/x86.h
   asmjit/x86/x86archtraits_p.h
   asmjit/x86/x86assembler.cpp
@@ -619,6 +646,7 @@ if (NOT ASMJIT_EMBED)
                                  test/asmjit_test_assembler_a64.cpp
                                  test/asmjit_test_assembler_x64.cpp
                                  test/asmjit_test_assembler_x86.cpp
+                                 test/asmjit_test_assembler_riscv.cpp
                       LIBRARIES  asmjit::asmjit
                       CFLAGS     ${ASMJIT_PRIVATE_CFLAGS}
                       CFLAGS_DBG ${ASMJIT_PRIVATE_CFLAGS_DBG}
@@ -655,6 +683,16 @@ if (NOT ASMJIT_EMBED)
                         CFLAGS_DBG ${ASMJIT_PRIVATE_CFLAGS_DBG}
                         CFLAGS_REL ${ASMJIT_PRIVATE_CFLAGS_REL})
     endif()
+
+    foreach(_target test_assembler
+            )
+      asmjit_add_target(${_target} TEST
+                        SOURCES    test/riscv/${_target}.cpp
+                        LIBRARIES  asmjit::asmjit
+                        CFLAGS     ${ASMJIT_PRIVATE_CFLAGS}
+                        CFLAGS_DBG ${ASMJIT_PRIVATE_CFLAGS_DBG}
+                        CFLAGS_REL ${ASMJIT_PRIVATE_CFLAGS_REL})
+    endforeach()
 
     if (NOT (ASMJIT_NO_BUILDER OR ASMJIT_NO_COMPILER))
       # Vectorcall tests and XMM tests require at least SSE2 in 32-bit mode (in 64-bit mode it's implicit).
@@ -700,6 +738,7 @@ if (NOT ASMJIT_EMBED)
                                    test/asmjit_test_compiler.h
                                    test/asmjit_test_compiler_a64.cpp
                                    test/asmjit_test_compiler_x86.cpp
+                                   test/asmjit_test_compiler_riscv.cpp
                         LIBRARIES  asmjit::asmjit
                         CFLAGS     ${ASMJIT_PRIVATE_CFLAGS} ${ASMJIT_SSE2_CFLAGS}
                         CFLAGS_DBG ${ASMJIT_PRIVATE_CFLAGS_DBG}

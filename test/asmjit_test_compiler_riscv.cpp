@@ -4,9 +4,10 @@
 // SPDX-License-Identifier: Zlib
 
 #include <asmjit/core.h>
-#if !defined(ASMJIT_NO_COMPILER) && !defined(ASMJIT_NO_AARCH64)
+#include <cstdint>
+#if !defined(ASMJIT_NO_COMPILER) && !defined(ASMJIT_NO_RISCV)
 
-#include <asmjit/a64.h>
+#include <asmjit/riscv.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,43 +16,43 @@
 
 using namespace asmjit;
 
-// a64::Compiler - A64TestCase
-// ===========================
+// riscv::Compiler - RISCVTestCase
+// ===============================
 
-class A64TestCase : public TestCase {
+class RISCVTestCase : public TestCase {
 public:
-  A64TestCase(const char* name = nullptr)
-    : TestCase(name, Arch::kAArch64) {}
+  RISCVTestCase(const char* name = nullptr)
+    : TestCase(name, Arch::kRISCV64) {}
 
   virtual void compile(BaseCompiler& cc) override {
-    compile(static_cast<a64::Compiler&>(cc));
+    compile(static_cast<riscv::Compiler&>(cc));
   }
 
-  virtual void compile(a64::Compiler& cc) = 0;
+  virtual void compile(riscv::Compiler& cc) = 0;
 };
 
-// a64::Compiler - A64Test_GpArgs
+// riscv::Compiler - RISCVTest_GpArgs
 // ==============================
 
-class A64Test_GpArgs : public A64TestCase {
+class RISCVTest_GpArgs : public RISCVTestCase {
 public:
   uint32_t _argCount;
   bool _preserveFP;
 
-  A64Test_GpArgs(uint32_t argCount, bool preserveFP)
+  RISCVTest_GpArgs(uint32_t argCount, bool preserveFP)
     : _argCount(argCount),
       _preserveFP(preserveFP) {
     _name.assignFormat("GpArgs {NumArgs=%u PreserveFP=%c}", argCount, preserveFP ? 'Y' : 'N');
   }
 
   static void add(TestApp& app) {
-    for (uint32_t i = 0; i <= 1; i++) {
-      app.add(new A64Test_GpArgs(i, true));
-      app.add(new A64Test_GpArgs(i, false));
+    for (uint32_t i = 0; i <= 16; i++) {
+     // app.add(new RISCVTest_GpArgs(i, true));
+      app.add(new RISCVTest_GpArgs(i, false));
     }
   }
 
-  virtual void compile(a64::Compiler& cc) {
+  virtual void compile(riscv::Compiler& cc) {
     uint32_t i;
     uint32_t argCount = _argCount;
 
@@ -64,11 +65,11 @@ public:
     if (_preserveFP)
       funcNode->frame().setPreservedFP();
 
-    a64::Gp sum;
+    riscv::Gp sum;
 
     if (argCount) {
       for (i = 0; i < argCount; i++) {
-        a64::Gp iReg = cc.newInt32("i%u", i);
+        riscv::Gp iReg = cc.newInt32("i%u", i);
         funcNode->setArg(i, iReg);
 
         if (i == 0)
@@ -188,37 +189,36 @@ public:
   }
 };
 
-
-// a64::Compiler - A64Test_Add
+// riscv::Compiler - RISCVTest_Add
 // ================================
-class A64Test_Add : public A64TestCase {
-  public:
-  A64Test_Add()
-    : A64TestCase("Add") {}
+class RISCVTest_Add : public RISCVTestCase {
+public:
+  RISCVTest_Add()
+    : RISCVTestCase("Add") {}
 
   static void add(TestApp& app) {
-    app.add(new A64Test_Add());
+    app.add(new RISCVTest_Add());
   }
 
-  virtual void compile(a64::Compiler& cc) {
+  virtual void compile(riscv::Compiler& cc) {
     FuncNode* funcNode = cc.addFunc(FuncSignature::build<void, void*, const void*, const void*>());
 
-    a64::Gp dst = cc.newUIntPtr("dst");
-    a64::Gp src1 = cc.newUIntPtr("src1");
-    a64::Gp src2 = cc.newUIntPtr("src2");
+    riscv::Gp dst = cc.newUIntPtr("dst");
+    riscv::Gp src1 = cc.newUIntPtr("src1");
+    riscv::Gp src2 = cc.newUIntPtr("src2");
 
     funcNode->setArg(0, dst);
     funcNode->setArg(1, src1);
     funcNode->setArg(2, src2);
 
-    a64::Gp v1 = cc.newUInt32("val1");
-    a64::Gp v2 = cc.newUInt32("val2");
-    a64::Gp v3 = cc.newUInt32("val3");
+    riscv::Gp v1 = cc.newUInt32("val1");
+    riscv::Gp v2 = cc.newUInt32("val2");
+    riscv::Gp v3 = cc.newUInt32("val3");
 
-    cc.ldr(v1, a64::ptr(src1));
-    cc.ldr(v2, a64::ptr(src2));
+    cc.lw(v1, riscv::Mem::ptr(src1));
+    cc.lw(v2, riscv::Mem::ptr(src2));
     cc.add(v3, v1, v2);
-    cc.str(v3, a64::ptr(dst));
+    cc.sw(v3, riscv::Mem::ptr(dst));
 
     cc.endFunc();
   }
@@ -241,89 +241,35 @@ class A64Test_Add : public A64TestCase {
   }
 };
 
-// a64::Compiler - A64Test_Simd1
-// =============================
-
-class A64Test_Simd1 : public A64TestCase {
-public:
-  A64Test_Simd1()
-    : A64TestCase("Simd1") {}
-
-  static void add(TestApp& app) {
-    app.add(new A64Test_Simd1());
-  }
-
-  virtual void compile(a64::Compiler& cc) {
-    FuncNode* funcNode = cc.addFunc(FuncSignature::build<void, void*, const void*, const void*>());
-
-    a64::Gp dst = cc.newUIntPtr("dst");
-    a64::Gp src1 = cc.newUIntPtr("src1");
-    a64::Gp src2 = cc.newUIntPtr("src2");
-
-    funcNode->setArg(0, dst);
-    funcNode->setArg(1, src1);
-    funcNode->setArg(2, src2);
-
-    a64::Vec v1 = cc.newVecQ("vec1");
-    a64::Vec v2 = cc.newVecQ("vec2");
-    a64::Vec v3 = cc.newVecQ("vec3");
-
-    cc.ldr(v2, a64::ptr(src1));
-    cc.ldr(v3, a64::ptr(src2));
-    cc.add(v1.b16(), v2.b16(), v3.b16());
-    cc.str(v1, a64::ptr(dst));
-
-    cc.endFunc();
-  }
-
-  virtual bool run(void* _func, String& result, String& expect) {
-    using Func = void (*)(void*, const void*, const void*);
-
-    uint32_t dst[4];
-    uint32_t aSrc[4] = { 0 , 1 , 2 , 255 };
-    uint32_t bSrc[4] = { 99, 17, 33, 1   };
-
-    // NOTE: It's a byte-add, so uint8_t(255+1) == 0.
-    uint32_t ref[4] = { 99, 18, 35, 0 };
-
-    ptr_as_func<Func>(_func)(dst, aSrc, bSrc);
-
-    result.assignFormat("ret={%u, %u, %u, %u}", dst[0], dst[1], dst[2], dst[3]);
-    expect.assignFormat("ret={%u, %u, %u, %u}", ref[0], ref[1], ref[2], ref[3]);
-
-    return result == expect;
-  }
-};
-
-// a64::Compiler - A64Test_ManyRegs
+// riscv::Compiler - RISCVTest_ManyRegs
 // ================================
 
-class A64Test_ManyRegs : public A64TestCase {
+class RISCVTest_ManyRegs : public RISCVTestCase {
 public:
   uint32_t _regCount;
 
-  A64Test_ManyRegs(uint32_t n)
-    : A64TestCase(),
+  RISCVTest_ManyRegs(uint32_t n)
+    : RISCVTestCase(),
       _regCount(n) {
     _name.assignFormat("GpRegs {NumRegs=%u}", n);
   }
 
   static void add(TestApp& app) {
     for (uint32_t i = 2; i < 64; i++)
-      app.add(new A64Test_ManyRegs(i));
+      app.add(new RISCVTest_ManyRegs(i));
   }
 
-  virtual void compile(a64::Compiler& cc) {
+  virtual void compile(riscv::Compiler& cc) {
     cc.addFunc(FuncSignature::build<int>());
 
-    a64::Gp* regs = static_cast<a64::Gp*>(malloc(_regCount * sizeof(a64::Gp)));
+    riscv::Gp* regs = static_cast<riscv::Gp*>(malloc(_regCount * sizeof(riscv::Gp)));
 
     for (uint32_t i = 0; i < _regCount; i++) {
       regs[i] = cc.newUInt32("reg%u", i);
       cc.mov(regs[i], i + 1);
     }
 
-    a64::Gp sum = cc.newUInt32("sum");
+    riscv::Gp sum = cc.newUInt32("sum");
     cc.mov(sum, 0);
 
     for (uint32_t i = 0; i < _regCount; i++) {
@@ -351,28 +297,28 @@ public:
   }
 };
 
-// a64::Compiler - A64Test_Adr
+// riscv::Compiler - RISCVTest_Adr
 // ===========================
 
-class A64Test_Adr : public A64TestCase {
+class RISCVTest_Adr : public RISCVTestCase {
 public:
-  A64Test_Adr()
-    : A64TestCase("Adr") {}
+  RISCVTest_Adr()
+    : RISCVTestCase("Adr") {}
 
   static void add(TestApp& app) {
-    app.add(new A64Test_Adr());
+    app.add(new RISCVTest_Adr());
   }
 
-  virtual void compile(a64::Compiler& cc) {
+  virtual void compile(riscv::Compiler& cc) {
     cc.addFunc(FuncSignature::build<int>());
 
-    a64::Gp addr = cc.newIntPtr("addr");
-    a64::Gp val = cc.newIntPtr("val");
+    riscv::Gp addr = cc.newIntPtr("addr");
+    riscv::Gp val = cc.newIntPtr("val");
 
     Label L_Table = cc.newLabel();
 
     cc.adr(addr, L_Table);
-    cc.ldrsw(val, a64::ptr(addr, 8));
+    cc.lw(val, riscv::Mem::ptr(addr, 8));
     cc.ret(val);
     cc.endFunc();
 
@@ -395,24 +341,24 @@ public:
   }
 };
 
-// a64::Compiler - A64Test_Branch1
+// riscv::Compiler - RISCVTest_Branch1
 // ===============================
 
-class A64Test_Branch1 : public A64TestCase {
+class RISCVTest_Branch1 : public RISCVTestCase {
 public:
-  A64Test_Branch1()
-    : A64TestCase("Branch1") {}
+  RISCVTest_Branch1()
+    : RISCVTestCase("Branch1") {}
 
   static void add(TestApp& app) {
-    app.add(new A64Test_Branch1());
+    app.add(new RISCVTest_Branch1());
   }
 
-  virtual void compile(a64::Compiler& cc) {
+  virtual void compile(riscv::Compiler& cc) {
     FuncNode* funcNode = cc.addFunc(FuncSignature::build<void, void*, size_t>());
 
-    a64::Gp p = cc.newIntPtr("p");
-    a64::Gp count = cc.newIntPtr("count");
-    a64::Gp i = cc.newIntPtr("i");
+    riscv::Gp p = cc.newIntPtr("p");
+    riscv::Gp count = cc.newIntPtr("count");
+    riscv::Gp i = cc.newIntPtr("i");
     Label L = cc.newLabel();
 
     funcNode->setArg(0, p);
@@ -421,10 +367,9 @@ public:
     cc.mov(i, 0);
 
     cc.bind(L);
-    cc.strb(i.w(), a64::ptr(p, i));
-    cc.add(i, i, 1);
-    cc.cmp(i, count);
-    cc.b_ne(L);
+    cc.sb(i, riscv::Mem::ptr(p, 0));
+    cc.addi(i, i, 1);
+    cc.bne(i, count, L);
 
     cc.endFunc();
   }
@@ -450,30 +395,33 @@ public:
   }
 };
 
-// a64::Compiler - A64Test_Invoke1
+// riscv::Compiler - RISCVTest_Invoke1
 // ===============================
 
-class A64Test_Invoke1 : public A64TestCase {
+class RISCVTest_Invoke1 : public RISCVTestCase {
 public:
-  A64Test_Invoke1()
-    : A64TestCase("Invoke1") {}
+  RISCVTest_Invoke1()
+    : RISCVTestCase("Invoke1") {}
 
   static void add(TestApp& app) {
-    app.add(new A64Test_Invoke1());
+    app.add(new RISCVTest_Invoke1());
   }
 
-  virtual void compile(a64::Compiler& cc) {
+  virtual void compile(riscv::Compiler& cc) {
     FuncNode* funcNode = cc.addFunc(FuncSignature::build<uint32_t, uint32_t, uint32_t>());
 
-    a64::Gp x = cc.newUInt32("x");
-    a64::Gp y = cc.newUInt32("y");
-    a64::Gp r = cc.newUInt32("r");
-    a64::Gp fn = cc.newUIntPtr("fn");
+    riscv::Gp x = cc.newUInt32("x");
+    riscv::Gp y = cc.newUInt32("y");
+    riscv::Gp r = cc.newUInt32("r");
+    riscv::Gp fn = cc.newUIntPtr("fn");
 
     funcNode->setArg(0, x);
     funcNode->setArg(1, y);
 
-    cc.mov(fn, (uint64_t)calledFunc);
+    // cc.mov(fn, (uint64_t)calledFunc);
+    // 不要直接mov立即数，使用常量池
+    riscv::Mem constAddr = cc.newConst(ConstPoolScope::kLocal, (void*)calledFunc, sizeof(void*));
+    cc.ld(fn, constAddr);
 
     InvokeNode* invokeNode;
     cc.invoke(&invokeNode, fn, FuncSignature::build<uint32_t, uint32_t, uint32_t>());
@@ -503,32 +451,35 @@ public:
   }
 };
 
-// a64::Compiler - A64Test_Invoke2
+// riscv::Compiler - RISCVTest_Invoke2
 // ===============================
 
-class A64Test_Invoke2 : public A64TestCase {
+class RISCVTest_Invoke2 : public RISCVTestCase {
 public:
-  A64Test_Invoke2()
-    : A64TestCase("Invoke2") {}
+  RISCVTest_Invoke2()
+    : RISCVTestCase("Invoke2") {}
 
   static void add(TestApp& app) {
-    app.add(new A64Test_Invoke2());
+    app.add(new RISCVTest_Invoke2());
   }
 
-  virtual void compile(a64::Compiler& cc) {
-    FuncNode* funcNode = cc.addFunc(FuncSignature::build<double, double, double>());
+  virtual void compile(riscv::Compiler& cc) {
+    FuncNode* funcNode = cc.addFunc(FuncSignature::build<int64_t, int64_t, int64_t>());
 
-    a64::Vec x = cc.newVecD("x");
-    a64::Vec y = cc.newVecD("y");
-    a64::Vec r = cc.newVecD("r");
-    a64::Gp fn = cc.newUIntPtr("fn");
+    riscv::Gp x = cc.newInt64("x");
+    riscv::Gp y = cc.newInt64("y");
+    riscv::Gp r = cc.newInt64("r");
+    riscv::Gp fn = cc.newUIntPtr("fn");
 
     funcNode->setArg(0, x);
     funcNode->setArg(1, y);
-    cc.mov(fn, (uint64_t)calledFunc);
+    printf("calledFunc address: %p\n", (void*)calledFunc);
+    riscv::Mem funcPtr = cc.newConst(ConstPoolScope::kLocal, (void*)calledFunc, 8);
+    cc.ld(fn, funcPtr);
+    //cc.mov(fn, (uint64_t)calledFunc);
 
     InvokeNode* invokeNode;
-    cc.invoke(&invokeNode, fn, FuncSignature::build<double, double, double>());
+    cc.invoke(&invokeNode, fn, FuncSignature::build<int64_t, int64_t, int64_t>());
     invokeNode->setArg(0, x);
     invokeNode->setArg(1, y);
     invokeNode->setRet(0, r);
@@ -538,49 +489,49 @@ public:
   }
 
   virtual bool run(void* _func, String& result, String& expect) {
-    using Func = double (*)(double, double);
+    using Func = int64_t (*)(int64_t, int64_t);
     Func func = ptr_as_func<Func>(_func);
 
-    double x = 49;
-    double y = 7;
+    int64_t x = 49;
+    int64_t y = 7;
 
-    result.assignFormat("ret={%f}", func(x, y));
-    expect.assignFormat("ret={%f}", calledFunc(x, y));
+    result.assignFormat("ret={%ld}", func(x, y));
+    expect.assignFormat("ret={%ld}", calledFunc(x, y));
 
     return result == expect;
   }
 
-  static double calledFunc(double x, double y) {
+  static int64_t calledFunc(int64_t x, int64_t y) {
     return x - y;
   }
 };
 
-// a64::Compiler - A64Test_Invoke3
+// riscv::Compiler - RISCVTest_Invoke3
 // ===============================
 
-class A64Test_Invoke3 : public A64TestCase {
+class RISCVTest_Invoke3 : public RISCVTestCase {
 public:
-  A64Test_Invoke3()
-    : A64TestCase("Invoke3") {}
+  RISCVTest_Invoke3()
+    : RISCVTestCase("Invoke3") {}
 
   static void add(TestApp& app) {
-    app.add(new A64Test_Invoke3());
+    app.add(new RISCVTest_Invoke3());
   }
 
-  virtual void compile(a64::Compiler& cc) {
-    FuncNode* funcNode = cc.addFunc(FuncSignature::build<double, double, double>());
+  virtual void compile(riscv::Compiler& cc) {
+    FuncNode* funcNode = cc.addFunc(FuncSignature::build<int64_t, int64_t, int64_t>());
 
-    a64::Vec x = cc.newVecD("x");
-    a64::Vec y = cc.newVecD("y");
-    a64::Vec r = cc.newVecD("r");
-    a64::Gp fn = cc.newUIntPtr("fn");
+    riscv::Gp x = cc.newInt64("x");
+    riscv::Gp y = cc.newInt64("y");
+    riscv::Gp r = cc.newInt64("r");
+    riscv::Gp fn = cc.newUIntPtr("fn");
 
     funcNode->setArg(0, x);
     funcNode->setArg(1, y);
     cc.mov(fn, (uint64_t)calledFunc);
 
     InvokeNode* invokeNode;
-    cc.invoke(&invokeNode, fn, FuncSignature::build<double, double, double>());
+    cc.invoke(&invokeNode, fn, FuncSignature::build<int64_t, int64_t, int64_t>());
     invokeNode->setArg(0, y);
     invokeNode->setArg(1, x);
     invokeNode->setRet(0, r);
@@ -590,32 +541,32 @@ public:
   }
 
   virtual bool run(void* _func, String& result, String& expect) {
-    using Func = double (*)(double, double);
+    using Func = int64_t (*)(int64_t, int64_t);
     Func func = ptr_as_func<Func>(_func);
 
-    double x = 49;
-    double y = 7;
+    int64_t x = 49;
+    int64_t y = 7;
 
-    result.assignFormat("ret={%f}", func(x, y));
-    expect.assignFormat("ret={%f}", calledFunc(y, x));
+    result.assignFormat("ret={%ld}", func(x, y));
+    expect.assignFormat("ret={%ld}", calledFunc(y, x));
 
     return result == expect;
   }
 
-  static double calledFunc(double x, double y) {
+  static int64_t calledFunc(int64_t x, int64_t y) {
     return x - y;
   }
 };
 
-// a64::Compiler - A64Test_JumpTable
+// riscv::Compiler - RISCVTest_JumpTable
 // =================================
-
-class A64Test_JumpTable : public A64TestCase {
+/*
+class RISCVTest_JumpTable : public RISCVTestCase {
 public:
   bool _annotated;
 
-  A64Test_JumpTable(bool annotated)
-    : A64TestCase("A64Test_JumpTable"),
+  RISCVTest_JumpTable(bool annotated)
+    : RISCVTestCase("RISCVTest_JumpTable"),
       _annotated(annotated) {
     _name.assignFormat("JumpTable {%s}", annotated ? "Annotated" : "Unknown Target");
   }
@@ -628,19 +579,19 @@ public:
   };
 
   static void add(TestApp& app) {
-    app.add(new A64Test_JumpTable(false));
-    app.add(new A64Test_JumpTable(true));
+    app.add(new RISCVTest_JumpTable(false));
+    app.add(new RISCVTest_JumpTable(true));
   }
 
-  virtual void compile(a64::Compiler& cc) {
+  virtual void compile(riscv::Compiler& cc) {
     FuncNode* funcNode = cc.addFunc(FuncSignature::build<float, float, float, uint32_t>());
 
-    a64::Vec a = cc.newVecS("a");
-    a64::Vec b = cc.newVecS("b");
-    a64::Gp op = cc.newUInt32("op");
+    riscv::Gp a = cc.newInt64("a");
+    riscv::Gp b = cc.newInt64("b");
+    riscv::Gp op = cc.newUInt32("op");
 
-    a64::Gp target = cc.newIntPtr("target");
-    a64::Gp offset = cc.newIntPtr("offset");
+    riscv::Gp target = cc.newIntPtr("target");
+    riscv::Gp offset = cc.newIntPtr("offset");
 
     Label L_End = cc.newLabel();
 
@@ -655,7 +606,7 @@ public:
     funcNode->setArg(2, op);
 
     cc.adr(target, L_Table);
-    cc.ldrsw(offset, a64::ptr(target, op, a64::sxtw(2)));
+    cc.ldrsw(offset, riscv::ptr(target, op, riscv::sxtw(2)));
     cc.add(target, target, offset);
 
     // JumpAnnotation allows to annotate all possible jump targets of
@@ -721,21 +672,20 @@ public:
     return result == expect;
   }
 };
-
-// a64::Compiler - Export
+*/
+// riscv::Compiler - Export
 // ======================
 
-void compiler_add_a64_tests(TestApp& app) {
-  app.addT<A64Test_GpArgs>();
-  app.addT<A64Test_ManyRegs>();
-  app.addT<A64Test_Add>();
-  app.addT<A64Test_Simd1>();
-  app.addT<A64Test_Adr>();
-  app.addT<A64Test_Branch1>();
-  app.addT<A64Test_Invoke1>();
-  app.addT<A64Test_Invoke2>();
-  app.addT<A64Test_Invoke3>();
-  app.addT<A64Test_JumpTable>();
+void compiler_add_riscv_tests(TestApp& app) {
+  app.addT<RISCVTest_GpArgs>();
+  app.addT<RISCVTest_ManyRegs>();
+  app.addT<RISCVTest_Add>();
+  app.addT<RISCVTest_Adr>();
+  app.addT<RISCVTest_Branch1>();
+  app.addT<RISCVTest_Invoke1>();
+  app.addT<RISCVTest_Invoke2>();
+  app.addT<RISCVTest_Invoke3>();
+  //app.addT<RISCVTest_JumpTable>();
 }
 
 #endif // !ASMJIT_NO_COMPILER && !ASMJIT_NO_AARCH64

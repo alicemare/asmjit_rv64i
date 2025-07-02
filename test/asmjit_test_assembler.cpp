@@ -24,6 +24,10 @@ bool testX64Assembler(const TestSettings& settings) noexcept;
 bool testA64Assembler(const TestSettings& settings) noexcept;
 #endif
 
+#if !defined(ASMJIT_NO_RISCV)
+bool testRISCVAssembler(const TestSettings& settings) noexcept;
+#endif
+
 static void printAppInfo() noexcept {
   printf("AsmJit Assembler Test-Suite v%u.%u.%u [Arch=%s] [Mode=%s]\n\n",
     unsigned((ASMJIT_LIBRARY_VERSION >> 16)       ),
@@ -50,6 +54,9 @@ static void printAppUsage(const TestSettings& settings) noexcept {
 #if !defined(ASMJIT_NO_AARCH64)
   printf("  --arch=aarch64 64-bit ARM architecture (AArch64)\n");
 #endif
+#if !defined(ASMJIT_NO_RISCV)
+  printf("  --arch=riscv   64-bit RISCV architecture (RISCV)\n");
+#endif
   printf("\n");
 }
 
@@ -71,6 +78,7 @@ int main(int argc, char* argv[]) {
   bool x86Failed = false;
   bool x64Failed = false;
   bool aarch64Failed = false;
+  bool riscvFailed = false;
 
 #if !defined(ASMJIT_NO_X86)
   if ((strcmp(arch, "all") == 0 || strcmp(arch, "x86") == 0))
@@ -85,7 +93,12 @@ int main(int argc, char* argv[]) {
     aarch64Failed = !testA64Assembler(settings);
 #endif
 
-  bool failed = x86Failed || x64Failed || aarch64Failed;
+#if !defined(ASMJIT_NO_RISCV)
+  if ((strcmp(arch, "all") == 0 || strcmp(arch, "riscv") == 0))
+    riscvFailed = !testRISCVAssembler(settings);
+#endif
+
+  bool failed = x86Failed || x64Failed || aarch64Failed || riscvFailed;
 
   if (failed) {
     if (x86Failed)
@@ -96,6 +109,9 @@ int main(int argc, char* argv[]) {
 
     if (aarch64Failed)
       printf("** AArch64 test suite failed **\n");
+
+    if (riscvFailed)
+      printf("** RISCV test suite failed **\n");
 
     printf("** FAILURE **\n");
   }

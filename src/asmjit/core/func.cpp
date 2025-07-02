@@ -18,6 +18,10 @@
   #include "../arm/a64func_p.h"
 #endif
 
+#if !defined(ASMJIT_NO_RISCV)
+  #include "../riscv/riscvfunc_p.h"
+#endif
+
 ASMJIT_BEGIN_NAMESPACE
 
 // CallConv - Initialization & Reset
@@ -35,6 +39,12 @@ ASMJIT_FAVOR_SIZE Error CallConv::init(CallConvId ccId, const Environment& envir
 #if !defined(ASMJIT_NO_AARCH64)
   if (environment.isFamilyAArch64()) {
     return a64::FuncInternal::initCallConv(*this, ccId, environment);
+  }
+#endif
+
+#if !defined(ASMJIT_NO_RISCV)
+  if (environment.isFamilyRISCV()) {
+    return riscv::FuncInternal::initCallConv(*this, ccId, environment);
   }
 #endif
 
@@ -81,6 +91,12 @@ ASMJIT_FAVOR_SIZE Error FuncDetail::init(const FuncSignature& signature, const E
 #if !defined(ASMJIT_NO_AARCH64)
   if (environment.isFamilyAArch64()) {
     return a64::FuncInternal::initFuncDetail(*this, signature);
+  }
+#endif
+
+#if !defined(ASMJIT_NO_RISCV)
+  if (environment.isFamilyRISCV()) {
+    return riscv::FuncInternal::initFuncDetail(*this, signature);
   }
 #endif
 

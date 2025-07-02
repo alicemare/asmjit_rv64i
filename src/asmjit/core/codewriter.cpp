@@ -187,6 +187,27 @@ bool CodeWriterUtils::encodeOffset32(uint32_t* dst, int64_t offset64, const Offs
       return true;
     }
 
+    case OffsetType::kRISCV64_ADR: {
+      // RISC-V ADR 伪指令的特殊处理
+      // 需要将偏移量分解为 AUIPC 的高20位和 ADDI 的低12位
+      
+      // 计算高20位和低12位（考虑符号扩展）
+      uint32_t hi20 = (value + 0x800) >> 12;
+      int32_t lo12 = value & 0xFFF;
+      if (lo12 > 2047) lo12 -= 4096;
+      
+      // 修改第一条指令（AUIPC）的高20位
+      // AUIPC 格式: [imm[31:12] | rd | 0010111]
+      uint32_t* auipcInst = dst;
+      *auipcInst = (*auipcInst & 0x00000FFF) | ((hi20 & 0xFFFFF) << 12);
+      
+      // 修改第二条指令（ADDI）的低12位
+      // ADDI 格式: [imm[11:0] | rs1 | 000 | rd | 0010011]
+      uint32_t* addiInst = dst + 1;
+      *addiInst = (*addiInst & 0x000FFFFF) | ((lo12 & 0xFFF) << 20);
+      
+      return true;
+    }
     default:
       return false;
   }
