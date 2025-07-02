@@ -13,68 +13,102 @@ ASMJIT_BEGIN_SUB_NAMESPACE(riscv)
 //! \addtogroup asmjit_riscv
 //! \{
 
-//! Register traits.
-//!
-//! RISC-V register identifiers are composed of Group and Type.
-struct RegTraits : public RegTraitsTemplate<RegType> {
-  enum : uint32_t { kSignature = 0x00010000 };
 
-  static inline constexpr RegType typeToSignature(RegType type) noexcept {
-    return RegType(uint32_t(type) | kSignature);
-  }
+//! General purpose register (RISC-V).
+class Gp : public UniGp {
+public:
+  ASMJIT_DEFINE_ABSTRACT_REG(Gp, UniGp)
+
+  //! Special register id.
+  enum Id : uint32_t {
+    kIdZr = 0,      //!< Zero register `zero`.
+    kIdRa = 1,      //!< Return address `ra`.
+    kIdSp = 2,      //!< Stack pointer `sp`.
+    kIdGp = 3,      //!< Global pointer `gp`.
+    kIdTp = 4,      //!< Thread pointer `tp`.
+    kIdFp = 8       //!< Frame pointer `fp` (s0).
+  };
+
+  //! Creates a new 32-bit GP register (W) having the given register id `regId`.
+  [[nodiscard]]
+  static ASMJIT_INLINE_CONSTEXPR Gp make_w(uint32_t regId) noexcept { return Gp(_signatureOf<RegType::kGp32>(), regId); }
+
+  //! Creates a new 64-bit GP register (X) having the given register id `regId`.
+  [[nodiscard]]
+  static ASMJIT_INLINE_CONSTEXPR Gp make_x(uint32_t regId) noexcept { return Gp(_signatureOf<RegType::kGp64>(), regId); }
+
+  //! Clones and casts this register to a 32-bit (W) register.
+  [[nodiscard]]
+  ASMJIT_INLINE_CONSTEXPR Gp w() const noexcept { return make_w(id()); }
+
+  //! Clones and casts this register to a 64-bit (X) register.
+  [[nodiscard]]
+  ASMJIT_INLINE_CONSTEXPR Gp x() const noexcept { return make_x(id()); }
 };
 
-//! General purpose register.
-class Gp : public Reg {
+//! Vector register (RISC-V).
+class Vec : public UniVec {
 public:
-  ASMJIT_DEFINE_REG_TRAITS(Gp, RegTraits, RegGroup::kGp)
+  ASMJIT_DEFINE_ABSTRACT_REG(Vec, UniVec)
 
-  //! Tests whether the register is a `W` register.
-  ASMJIT_INLINE_NODEBUG bool isW() const noexcept { return hasSignature(RegTraits::typeToSignature(RegType::kGp32)); }
-  //! Tests whether the register is an `X` register.
-  ASMJIT_INLINE_NODEBUG bool isX() const noexcept { return hasSignature(RegTraits::typeToSignature(RegType::kGp64)); }
+  // TODO: RISC-V vector registers implementation.
+};
+
+//! Memory operand (RISC-V).
+class Mem : public BaseMem {
+public:
+  //! \name Construction & Destruction
+  //! \{
+
+  ASMJIT_INLINE_CONSTEXPR Mem() noexcept : BaseMem() {}
+  ASMJIT_INLINE_CONSTEXPR Mem(const Mem& other) noexcept : BaseMem(other) {}
+  ASMJIT_INLINE_NODEBUG explicit Mem(Globals::NoInit_) noexcept : BaseMem(Globals::NoInit) {}
+
+  ASMJIT_INLINE_CONSTEXPR Mem(const Signature& signature, uint32_t baseId, uint32_t indexId, int32_t offset) noexcept
+    : BaseMem(signature, baseId, indexId, offset) {}
+
+  ASMJIT_INLINE_CONSTEXPR explicit Mem(const Label& base, int32_t off = 0, Signature signature = Signature{0}) noexcept
+    : BaseMem(Signature::fromOpType(OperandType::kMem) |
+              Signature::fromMemBaseType(RegType::kLabelTag) |
+              signature, base.id(), 0, off) {}
+
+  ASMJIT_INLINE_CONSTEXPR explicit Mem(const Gp& base, int64_t off = 0, Signature signature = Signature{0}) noexcept
+    : BaseMem(Signature::fromOpType(OperandType::kMem) |
+              Signature::fromMemBaseType(base.regType()) |
+              signature, base.id(), 0, int32_t(off)) {}
+
+  // NOTE: RISC-V doesn't have [base + index] addressing mode.
+
+  ASMJIT_INLINE_CONSTEXPR explicit Mem(uint64_t abs, Signature signature = Signature{0}) noexcept
+    : BaseMem(Signature::fromOpType(OperandType::kMem) |
+              signature, uint32_t(abs >> 32), 0, int32_t(uint32_t(abs & 0xFFFFFFFFu))) {}
+
+  //! \}
+
+  //! \name Overloaded Operators
+  //! \{
+
+  ASMJIT_INLINE_CONSTEXPR Mem& operator=(const Mem& other) noexcept { copyFrom(other); return *this; }
+
+  //! \}
+
+  //! \name Clone
+  //! \{
+
+  //! Clones the memory operand.
+  [[nodiscard]]
+  ASMJIT_INLINE_CONSTEXPR Mem clone() const noexcept { return Mem(*this); }
+
+  //! \}
 };
 
 namespace regs {
 
 //! Creates a `w` register operand.
-static ASMJIT_INLINE_NODEBUG constexpr Gp w(uint32_t id) noexcept { return Gp(Gp::kSignature | (uint32_t(RegType::kGp32) << 8) | id); }
-//! Creates a `x` register operand.
-static ASMJIT_INLINE_NODEBUG constexpr Gp x(uint32_t id) noexcept { return Gp(Gp::kSignature | (uint32_t(RegType::kGp64) << 8) | id); }
+static ASMJIT_INLINE_NODEBUG constexpr Gp w(uint32_t id) noexcept { return Gp::make_w(id); }
 
-// 32-bit Registers.
-static constexpr Gp w0 = w(0);
-static constexpr Gp w1 = w(1);
-static constexpr Gp w2 = w(2);
-static constexpr Gp w3 = w(3);
-static constexpr Gp w4 = w(4);
-static constexpr Gp w5 = w(5);
-static constexpr Gp w6 = w(6);
-static constexpr Gp w7 = w(7);
-static constexpr Gp w8 = w(8);
-static constexpr Gp w9 = w(9);
-static constexpr Gp w10 = w(10);
-static constexpr Gp w11 = w(11);
-static constexpr Gp w12 = w(12);
-static constexpr Gp w13 = w(13);
-static constexpr Gp w14 = w(14);
-static constexpr Gp w15 = w(15);
-static constexpr Gp w16 = w(16);
-static constexpr Gp w17 = w(17);
-static constexpr Gp w18 = w(18);
-static constexpr Gp w19 = w(19);
-static constexpr Gp w20 = w(20);
-static constexpr Gp w21 = w(21);
-static constexpr Gp w22 = w(22);
-static constexpr Gp w23 = w(23);
-static constexpr Gp w24 = w(24);
-static constexpr Gp w25 = w(25);
-static constexpr Gp w26 = w(26);
-static constexpr Gp w27 = w(27);
-static constexpr Gp w28 = w(28);
-static constexpr Gp w29 = w(29);
-static constexpr Gp w30 = w(30);
-static constexpr Gp w31 = w(31);
+//! Creates a `x` register operand.
+static ASMJIT_INLINE_NODEBUG constexpr Gp x(uint32_t id) noexcept { return Gp::make_x(id); }
 
 // 64-bit Registers.
 static constexpr Gp x0 = x(0);   // zero.
