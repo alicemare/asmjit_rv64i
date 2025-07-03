@@ -7,6 +7,7 @@
 #include "../core/support.h"
 #include "../riscv/riscvassembler.h"
 #include "../riscv/riscvinstdb.h"
+#include "../riscv/riscvemithelper_p.h"
 
 ASMJIT_BEGIN_SUB_NAMESPACE(riscv)
 
@@ -15,7 +16,7 @@ ASMJIT_BEGIN_SUB_NAMESPACE(riscv)
 
 Assembler::Assembler(CodeHolder* code) noexcept : BaseAssembler() {
   if (code)
-    attach(code);
+    code->attach(this);
 }
 
 Assembler::~Assembler() noexcept {}
@@ -24,50 +25,153 @@ Assembler::~Assembler() noexcept {}
 // =======================
 
 Error Assembler::_emit(InstId instId, const Operand_& o0, const Operand_& o1, const Operand_& o2, const Operand_* opExt) {
-  const InstDB::InstInfo& instInfo = InstDB::instInfo(instId);
-  const InstDB::EncodingData& enc = InstDB::encodingData[instInfo.encodingId()];
+  const InstDB::InstInfo& info = InstDB::infoById(instId);
+  uint32_t opcode = 0;
 
-  switch (enc.type()) {
-    case InstDB::EncodingType::kR:
-      return _emitR(instId, o0.as<Gp>(), o1.as<Gp>(), o2.as<Gp>());
-    case InstDB::EncodingType::kI:
-      return _emitI(instId, o0.as<Gp>(), o1.as<Gp>(), o2.as<Imm>());
-    case InstDB::EncodingType::kS:
-      return _emitS(instId, o0.as<Mem>(), o1.as<Gp>());
-    case InstDB::EncodingType::kB:
-      return _emitB(instId, o0.as<Gp>(), o1.as<Gp>(), o2.as<Label>());
-    case InstDB::EncodingType::kU:
-      return _emitU(instId, o0.as<Gp>(), o1.as<Imm>());
-    case InstDB::EncodingType::kJ:
-      return _emitJ(instId, o0.as<Gp>(), o1.as<Label>());
+  switch (info.encoding()) {
+    case InstDB::EncodingType::kR: {
+      const Gp& rd = o0.as<Gp>();
+      const Gp& rs1 = o1.as<Gp>();
+      const Gp& rs2 = o2.as<Gp>();
+
+      opcode = info.opcode() |
+               (uint32_t(rd.id()) << 7) |
+               (info.funct3() << 12) |
+               (uint32_t(rs1.id()) << 15) |
+               (uint32_t(rs2.id()) << 20) |
+               (info.funct7() << 25);
+      break;
+    }
+
+    case InstDB::EncodingType::kI: {
+      const Gp& rd = o0.as<Gp>();
+      uint32_t rs1_id;
+      int64_t immValue;
+
+      if (info.hasFlag(InstDB::kIsLoad)) {
+        const Mem& mem = o1.as<Mem>();
+        if (!mem.hasBaseReg())
+          return DebugUtils::errored(kErrorInvalidInstruction);
+        rs1_id = mem.baseId();
+        immValue = mem.offset();
+      } else {
+        rs1_id = o1.as<Gp>().id();
+        immValue = o2.as<Imm>().value();
+      }
+
+      //if (!Support::isSigned<12>(immValue))
+      //  return DebugUtils::errored(kErrorInvalidImmediate);
+
+      uint32_t imm12 = uint32_t(immValue) & 0xFFF;
+      opcode = info.opcode() |
+               (uint32_t(rd.id()) << 7) |
+               (info.funct3() << 12) |
+               (rs1_id << 15) |
+               (imm12 << 20);
+      break;
+    }
+
+    case InstDB::EncodingType::kS: {
+      const Mem& mem = o0.as<Mem>();
+      const Gp& rs2 = o1.as<Gp>();
+
+      if (!mem.hasBaseReg())
+        return DebugUtils::errored(kErrorInvalidInstruction);
+
+      const Gp& rs1 = mem.baseReg().as<Gp>();
+      int64_t offset = mem.offset();
+
+      //if (!Support::isSigned<12>(offset))
+      //  return DebugUtils::errored(kErrorInvalidDisplacement);
+
+      uint32_t imm11_5 = (uint32_t(offset) >> 5) & 0x7F;
+      uint32_t imm4_0 = uint32_t(offset) & 0x1F;
+
+      opcode = info.opcode() |
+               (imm4_0 << 7) |
+               (info.funct3() << 12) |
+               (uint32_t(rs1.id()) << 15) |
+               (uint32_t(rs2.id()) << 20) |
+               (imm11_5 << 25);
+      break;
+    }
+
+    case InstDB::EncodingType::kB: {
+      const Gp& rs1 = o0.as<Gp>();
+      const Gp& rs2 = o1.as<Gp>();
+      const Imm& imm = o2.as<Imm>();
+      int64_t offset = imm.value();
+
+      //if ((offset & 1) != 0 || !Support::isSigned<13>(offset))
+      //  return DebugUtils::errored(kErrorInvalidDisplacement);
+
+      uint32_t uimm = uint32_t(offset);
+      uint32_t imm11   = (uimm >> 11) & 1;
+      uint32_t imm4_1  = (uimm >> 1) & 0xF;
+      uint32_t imm10_5 = (uimm >> 5) & 0x3F;
+      uint32_t imm12   = (uimm >> 12) & 1;
+
+      opcode = info.opcode() |
+               (imm11 << 7) |
+               (imm4_1 << 8) |
+               (info.funct3() << 12) |
+               (uint32_t(rs1.id()) << 15) |
+               (uint32_t(rs2.id()) << 20) |
+               (imm10_5 << 25) |
+               (imm12 << 31);
+      break;
+    }
+
+    case InstDB::EncodingType::kU: {
+      const Gp& rd = o0.as<Gp>();
+      const Imm& imm = o1.as<Imm>();
+      int64_t immValue = imm.value();
+
+      if (immValue < 0 || immValue >= (1 << 20))
+        return DebugUtils::errored(kErrorInvalidImmediate);
+
+      opcode = info.opcode() |
+               (uint32_t(rd.id()) << 7) |
+               ((uint32_t(immValue) & 0xFFFFF) << 12);
+      break;
+    }
+
+    case InstDB::EncodingType::kJ: {
+      const Gp& rd = o0.as<Gp>();
+      const Imm& imm = o1.as<Imm>();
+      int64_t offset = imm.value();
+
+      //if ((offset & 1) != 0 || !Support::isSigned<21>(offset))
+      //  return DebugUtils::errored(kErrorInvalidDisplacement);
+
+      uint32_t uimm = uint32_t(offset);
+      uint32_t imm20    = (uimm >> 20) & 1;
+      uint32_t imm19_12 = (uimm >> 12) & 0xFF;
+      uint32_t imm11    = (uimm >> 11) & 1;
+      uint32_t imm10_1  = (uimm >> 1) & 0x3FF;
+
+      opcode = info.opcode() |
+               (uint32_t(rd.id()) << 7) |
+               (imm19_12 << 12) |
+               (imm11 << 20) |
+               (imm10_1 << 21) |
+               (imm20 << 31);
+      break;
+    }
+
     default:
       return DebugUtils::errored(kErrorInvalidInstruction);
   }
+
+  // TODO: EmitHelper::emit(opcode);
+  return kErrorOk;
 }
 
 // riscv::Assembler - Align
 // ========================
 
 Error Assembler::align(AlignMode alignMode, uint32_t alignment) {
-  if (ASMJIT_UNLIKELY(alignment > 64 || !Support::isPowerOf2(alignment)))
-    return DebugUtils::errored(kErrorInvalidArgument);
-
-  if (isAligning()) {
-    if (alignment > _alignMaxAhead)
-      _alignMaxAhead = alignment;
-    return kErrorOk;
-  }
-
-  uint32_t i = Support::alignUp(offset(), alignment) - offset();
-  if (i == 0)
-    return kErrorOk;
-
-  if (ASMJIT_UNLIKELY(cursor() + i > endOfBuffer()))
-    return reportError(kErrorNoHeapMemory);
-
-  for (; i != 0; i -= 4)
-    nop();
-
+  // todo, align write code
   return kErrorOk;
 }
 
@@ -75,11 +179,11 @@ Error Assembler::align(AlignMode alignMode, uint32_t alignment) {
 // =========================
 
 Error Assembler::onAttach(CodeHolder& code) noexcept {
-  Arch arch = code.arch();
-  if (!Arch::isRiscvFamily(arch))
-    return DebugUtils::errored(kErrorInvalidArch);
-
   ASMJIT_PROPAGATE(Base::onAttach(code));
+
+  _instructionAlignment = uint8_t(4);
+  updateEmitterFuncs(this);
+
   return kErrorOk;
 }
 

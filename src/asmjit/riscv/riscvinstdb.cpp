@@ -11,33 +11,33 @@ ASMJIT_BEGIN_SUB_NAMESPACE(riscv)
 namespace InstDB {
 
   // A helper to define a R-Type instruction info.
-static constexpr InstInfo R(uint16_t rwInfoIndex, uint16_t flags = 0) noexcept {
-  return InstInfo { uint32_t(EncodingType::kR), 0, 0, rwInfoIndex, flags };
+static constexpr InstInfo R(uint32_t opcode, uint32_t funct3, uint32_t funct7, uint16_t rwInfoIndex, uint16_t flags = 0) noexcept {
+  return InstInfo { uint32_t(EncodingType::kR), opcode, funct3, funct7, 0, rwInfoIndex, flags };
 }
 
 // A helper to define a I-Type instruction info.
-static constexpr InstInfo I(uint16_t rwInfoIndex, uint16_t flags = 0) noexcept {
-  return InstInfo { uint32_t(EncodingType::kI), 0, 0, rwInfoIndex, flags };
+static constexpr InstInfo I(uint32_t opcode, uint32_t funct3, uint16_t rwInfoIndex, uint16_t flags = 0) noexcept {
+  return InstInfo { uint32_t(EncodingType::kI), opcode, funct3, 0, 0, rwInfoIndex, flags };
 }
 
 // A helper to define a S-Type instruction info.
-static constexpr InstInfo S(uint16_t rwInfoIndex, uint16_t flags = 0) noexcept {
-  return InstInfo { uint32_t(EncodingType::kS), 0, 0, rwInfoIndex, flags };
+static constexpr InstInfo S(uint32_t opcode, uint32_t funct3, uint16_t rwInfoIndex, uint16_t flags = 0) noexcept {
+  return InstInfo { uint32_t(EncodingType::kS), opcode, funct3, 0, 0, rwInfoIndex, flags };
 }
 
 // A helper to define a B-Type instruction info.
-static constexpr InstInfo B(uint16_t rwInfoIndex, uint16_t flags = 0) noexcept {
-  return InstInfo { uint32_t(EncodingType::kB), 0, 0, rwInfoIndex, static_cast<uint16_t>(flags | InstFlags::kIsBranch) };
+static constexpr InstInfo B(uint32_t opcode, uint32_t funct3, uint16_t rwInfoIndex, uint16_t flags = 0) noexcept {
+  return InstInfo { uint32_t(EncodingType::kB), opcode, funct3, 0, 0, rwInfoIndex, static_cast<uint16_t>(flags | InstFlags::kIsBranch) };
 }
 
 // A helper to define a U-Type instruction info.
-static constexpr InstInfo U(uint16_t rwInfoIndex, uint16_t flags = 0) noexcept {
-  return InstInfo { uint32_t(EncodingType::kU), 0, 0, rwInfoIndex, flags };
+static constexpr InstInfo U(uint32_t opcode, uint16_t rwInfoIndex, uint16_t flags = 0) noexcept {
+  return InstInfo { uint32_t(EncodingType::kU), opcode, 0, 0, 0, rwInfoIndex, flags };
 }
 
 // A helper to define a J-Type instruction info.
-static constexpr InstInfo J(uint16_t rwInfoIndex, uint16_t flags = 0) noexcept {
-  return InstInfo { uint32_t(EncodingType::kJ), 0, 0, rwInfoIndex, static_cast<uint16_t>(flags | InstFlags::kIsJump) };
+static constexpr InstInfo J(uint32_t opcode, uint16_t rwInfoIndex, uint16_t flags = 0) noexcept {
+  return InstInfo { uint32_t(EncodingType::kJ), opcode, 0, 0, 0, rwInfoIndex, static_cast<uint16_t>(flags | InstFlags::kIsJump) };
 }
 
 // The `_opRWInfoTable` is not defined here, because it's complex and is typically
@@ -59,63 +59,66 @@ const InstInfo _instInfoTable[] = {
 
   // RV32I/RV64I Base Instruction Set
   // Arthmetic
-  R(kRW_r_r_r), // kIdAdd
-  I(kRW_r_r_imm), // kIdAddi
-  R(kRW_r_r_r), // kIdSub
+  R(0b0110011, 0b000, 0b0000000, kRW_r_r_r), // kIdAdd
+  I(0b0010011, 0b000, kRW_r_r_imm), // kIdAddi
+  R(0b0110011, 0b000, 0b0100000, kRW_r_r_r), // kIdSub
   // Compare
-  R(kRW_r_r_r), // kIdSlt
-  I(kRW_r_r_imm), // kIdSlti
-  R(kRW_r_r_r), // kIdSltu
-  I(kRW_r_r_imm), // kIdSltiu
+  R(0b0110011, 0b010, 0b0000000, kRW_r_r_r), // kIdSlt
+  I(0b0010011, 0b010, kRW_r_r_imm), // kIdSlti
+  R(0b0110011, 0b011, 0b0000000, kRW_r_r_r), // kIdSltu
+  I(0b0010011, 0b011, kRW_r_r_imm), // kIdSltiu
   // Logical
-  R(kRW_r_r_r), // kIdAnd
-  I(kRW_r_r_imm), // kIdAndi
-  R(kRW_r_r_r), // kIdOr
-  I(kRW_r_r_imm), // kIdOri
-  R(kRW_r_r_r), // kIdXor
-  I(kRW_r_r_imm), // kIdXOri
+  R(0b0110011, 0b111, 0b0000000, kRW_r_r_r), // kIdAnd
+  I(0b0010011, 0b111, kRW_r_r_imm), // kIdAndi
+  R(0b0110011, 0b110, 0b0000000, kRW_r_r_r), // kIdOr
+  I(0b0010011, 0b110, kRW_r_r_imm), // kIdOri
+  R(0b0110011, 0b100, 0b0000000, kRW_r_r_r), // kIdXor
+  I(0b0010011, 0b100, kRW_r_r_imm), // kIdXOri
   // Shift
-  R(kRW_r_r_r), // kIdSll
-  I(kRW_r_r_imm), // kIdSlli
-  R(kRW_r_r_r), // kIdSrl
-  I(kRW_r_r_imm), // kIdSrli
-  R(kRW_r_r_r), // kIdSra
-  I(kRW_r_r_imm), // kIdSrai
+  R(0b0110011, 0b001, 0b0000000, kRW_r_r_r), // kIdSll
+  I(0b0010011, 0b001, kRW_r_r_imm), // kIdSlli
+  R(0b0110011, 0b101, 0b0000000, kRW_r_r_r), // kIdSrl
+  I(0b0010011, 0b101, kRW_r_r_imm), // kIdSrli
+  R(0b0110011, 0b101, 0b0100000, kRW_r_r_r), // kIdSra
+  I(0b0010011, 0b101, kRW_r_r_imm), // kIdSrai
   // RV64I 32bit extension
-  R(kRW_r_r_r), // kIdAddw
-  I(kRW_r_r_imm), // kIdAddiw
-  R(kRW_r_r_r), // kIdSubw
-  R(kRW_r_r_r), // kIdSllw
-  I(kRW_r_r_imm), // kIdSlliw
-  R(kRW_r_r_r), // kIdSrlw
-  I(kRW_r_r_imm), // kIdSrliw
-  R(kRW_r_r_r), // kIdSraw
-  I(kRW_r_r_imm), // kIdSraiw
+  R(0b0111011, 0b000, 0b0000000, kRW_r_r_r), // kIdAddw
+  I(0b0011011, 0b000, kRW_r_r_imm), // kIdAddiw
+  R(0b0111011, 0b000, 0b0100000, kRW_r_r_r), // kIdSubw
+  R(0b0111011, 0b001, 0b0000000, kRW_r_r_r), // kIdSllw
+  I(0b0011011, 0b001, kRW_r_r_imm), // kIdSlliw
+  R(0b0111011, 0b101, 0b0000000, kRW_r_r_r), // kIdSrlw
+  I(0b0011011, 0b101, kRW_r_r_imm), // kIdSrliw
+  R(0b0111011, 0b101, 0b0100000, kRW_r_r_r), // kIdSraw
+  I(0b0011011, 0b101, kRW_r_r_imm), // kIdSraiw
   // Load
-  I(kRW_r_mem, InstFlags::kIsLoad), // kIdLb
-  I(kRW_r_mem, InstFlags::kIsLoad), // kIdLh
-  I(kRW_r_mem, InstFlags::kIsLoad), // kIdLw
-  I(kRW_r_mem, InstFlags::kIsLoad), // kIdLbu
-  I(kRW_r_mem, InstFlags::kIsLoad), // kIdLhu
-  I(kRW_r_mem, InstFlags::kIsLoad), // kIdLwu
-  I(kRW_r_mem, InstFlags::kIsLoad), // kIdLd
+  I(0b0000011, 0b000, kRW_r_mem, InstFlags::kIsLoad), // kIdLb
+  I(0b0000011, 0b001, kRW_r_mem, InstFlags::kIsLoad), // kIdLh
+  I(0b0000011, 0b010, kRW_r_mem, InstFlags::kIsLoad), // kIdLw
+  I(0b0000011, 0b100, kRW_r_mem, InstFlags::kIsLoad), // kIdLbu
+  I(0b0000011, 0b101, kRW_r_mem, InstFlags::kIsLoad), // kIdLhu
+  I(0b0000011, 0b110, kRW_r_mem, InstFlags::kIsLoad), // kIdLwu
+  I(0b0000011, 0b011, kRW_r_mem, InstFlags::kIsLoad), // kIdLd
   // Store
-  S(kRW_mem_r, InstFlags::kIsStore), // kIdSb
-  S(kRW_mem_r, InstFlags::kIsStore), // kIdSh
-  S(kRW_mem_r, InstFlags::kIsStore), // kIdSw
-  S(kRW_mem_r, InstFlags::kIsStore), // kIdSd
+  S(0b0100011, 0b000, kRW_mem_r, InstFlags::kIsStore), // kIdSb
+  S(0b0100011, 0b001, kRW_mem_r, InstFlags::kIsStore), // kIdSh
+  S(0b0100011, 0b010, kRW_mem_r, InstFlags::kIsStore), // kIdSw
+  S(0b0100011, 0b011, kRW_mem_r, InstFlags::kIsStore), // kIdSd
   // Branch
-  B(kRW_r_r_label), // kIdBeq
-  B(kRW_r_r_label), // kIdBne
-  B(kRW_r_r_label), // kIdBlt
-  B(kRW_r_r_label), // kIdBge
-  B(kRW_r_r_label), // kIdBltu
-  B(kRW_r_r_label), // kIdBgeu
-  J(kRW_r_label), // kIdJal
-  I(kRW_r_r_imm, InstFlags::kIsJump), // kIdJalr
+  B(0b1100011, 0b000, kRW_r_r_label), // kIdBeq
+  B(0b1100011, 0b001, kRW_r_r_label), // kIdBne
+  B(0b1100011, 0b100, kRW_r_r_label), // kIdBlt
+  B(0b1100011, 0b101, kRW_r_r_label), // kIdBge
+  B(0b1100011, 0b110, kRW_r_r_label), // kIdBltu
+  B(0b1100011, 0b111, kRW_r_r_label), // kIdBgeu
+  // Jump
+  J(0b1101111, kRW_r_label), // kIdJal
+  I(0b1100111, 0b000, kRW_r_r_imm, InstFlags::kIsJump), // kIdJalr
   // Others
-  I(kRW_None), // kIdNop
-  I(kRW_fence), // kIdFence
+  U(0b0110111, kRW_None), // kIdLui
+  U(0b0010111, kRW_None), // kIdAuipc
+  I(0b0001111, 0b000, kRW_fence), // kIdFence
+  I(0b0010011, 0b000, kRW_None) // kIdNop
 };
 // ${InstInfo:End}
 }

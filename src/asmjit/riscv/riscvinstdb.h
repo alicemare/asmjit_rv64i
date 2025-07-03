@@ -146,9 +146,10 @@ enum InstFlags : uint16_t {
 struct InstInfo {
   //! Instruction encoding type.
   uint32_t _encoding : 8;
-  //! Index to data specific to each encoding type.
-  uint32_t _encodingDataIndex : 8;
-  uint32_t _reserved : 16;
+  uint32_t _opcode : 7;
+  uint32_t _funct3 : 3;
+  uint32_t _funct7 : 7;
+  uint32_t _reserved : 7;
 
   uint16_t _rwInfoIndex;
   uint16_t _flags;
@@ -167,6 +168,15 @@ struct InstInfo {
 
   [[nodiscard]]
   ASMJIT_INLINE_NODEBUG EncodingType encoding() const noexcept { return (EncodingType)_encoding; }
+
+  [[nodiscard]]
+  ASMJIT_INLINE_NODEBUG uint32_t opcode() const noexcept { return _opcode; }
+
+  [[nodiscard]]
+  ASMJIT_INLINE_NODEBUG uint32_t funct3() const noexcept { return _funct3; }
+
+  [[nodiscard]]
+  ASMJIT_INLINE_NODEBUG uint32_t funct7() const noexcept { return _funct7; }
 
   //! \}
 };
