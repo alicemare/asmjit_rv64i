@@ -27,7 +27,7 @@ static constexpr InstInfo S(uint16_t rwInfoIndex, uint16_t flags = 0) noexcept {
 
 // A helper to define a B-Type instruction info.
 static constexpr InstInfo B(uint16_t rwInfoIndex, uint16_t flags = 0) noexcept {
-  return InstInfo { uint32_t(EncodingType::kB), 0, 0, rwInfoIndex, flags | InstFlags::kIsBranch };
+  return InstInfo { uint32_t(EncodingType::kB), 0, 0, rwInfoIndex, static_cast<uint16_t>(flags | InstFlags::kIsBranch) };
 }
 
 // A helper to define a U-Type instruction info.
@@ -37,7 +37,7 @@ static constexpr InstInfo U(uint16_t rwInfoIndex, uint16_t flags = 0) noexcept {
 
 // A helper to define a J-Type instruction info.
 static constexpr InstInfo J(uint16_t rwInfoIndex, uint16_t flags = 0) noexcept {
-  return InstInfo { uint32_t(EncodingType::kJ), 0, 0, rwInfoIndex, flags | InstFlags::kIsJump };
+  return InstInfo { uint32_t(EncodingType::kJ), 0, 0, rwInfoIndex, static_cast<uint16_t>(flags | InstFlags::kIsJump) };
 }
 
 // The `_opRWInfoTable` is not defined here, because it's complex and is typically
