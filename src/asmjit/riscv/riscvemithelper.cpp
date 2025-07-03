@@ -11,8 +11,7 @@
 #include "../core/string.h"
 #include "../core/support.h"
 #include "../core/type.h"
-#include "../riscv/riscvformatter_p.h"
-#include "../riscv/riscvinstapi_p.h"
+#include "../riscv/riscvemithelper_p.h"
 #include "../riscv/riscvoperand.h"
 
 ASMJIT_BEGIN_SUB_NAMESPACE(riscv)
@@ -53,16 +52,16 @@ Error EmitHelper::emitRegMove(const Operand_& dst_, const Operand_& src_, TypeId
     switch (typeId) {
       case TypeId::kInt8:
       case TypeId::kUInt8:
-        return emitter->sb(src.as<Gp>(), dst);
+        return emitter->sb(dst, src.as<Gp>());
       case TypeId::kInt16:
       case TypeId::kUInt16:
-        return emitter->sh(src.as<Gp>(), dst);
+        return emitter->sh(dst, src.as<Gp>());
       case TypeId::kInt32:
       case TypeId::kUInt32:
-        return emitter->sw(src.as<Gp>(), dst);
+        return emitter->sw(dst, src.as<Gp>());
       case TypeId::kInt64:
       case TypeId::kUInt64:
-        return emitter->sd(src.as<Gp>(), dst);
+        return emitter->sd(dst, src.as<Gp>());
       default:
         break;
     }
@@ -77,16 +76,8 @@ Error EmitHelper::emitRegMove(const Operand_& dst_, const Operand_& src_, TypeId
 }
 
 Error EmitHelper::emitRegSwap(const Reg& a, const Reg& b, const char* comment) {
-  Emitter* emitter = _emitter->as<Emitter>();
-  emitter->setInlineComment(comment);
-
-  Gp t = emitter->newTmpGp();
-  emitter->mv(t, a.as<Gp>());
-  emitter->mv(a.as<Gp>(), b.as<Gp>());
-  emitter->mv(b.as<Gp>(), t);
-
-  emitter->setInlineComment(nullptr);
-  return kErrorOk;
+  DebugUtils::unused(a, b, comment);
+  return DebugUtils::errored(kErrorInvalidState);
 }
 
 Error EmitHelper::emitArgMove(const Reg& dst_, TypeId dstTypeId, const Operand_& src_, TypeId srcTypeId, const char* comment) {
@@ -96,18 +87,18 @@ Error EmitHelper::emitArgMove(const Reg& dst_, TypeId dstTypeId, const Operand_&
 
 Error EmitHelper::emitProlog(const FuncFrame& frame) {
   Emitter* emitter = _emitter->as<Emitter>();
-  const Gp& sp = riscv::sp;
-  const Gp& fp = riscv::fp;
+  const Gp& sp = regs::sp;
+  const Gp& fp = regs::fp;
 
-  int stackSize = frame.stackSize();
-  if (stackSize) {
-    emitter->addi(sp, sp, -stackSize);
-  }
+  uint32_t stackAdjustment = frame._stackAdjustment;
+  if (stackAdjustment)
+    emitter->addi(sp, sp, -int32_t(stackAdjustment));
 
   if (frame.hasPreservedFP()) {
-    emitter->sd(riscv::ra, Mem(sp, frame.raOffset()));
-    emitter->sd(fp, Mem(sp, frame.fpOffset()));
-    emitter->addi(fp, sp, stackSize);
+    // TODO: [asmjit] This is a temporary fix, frame.daOffset() is not ideal.
+    emitter->sd(Mem(sp, int32_t(frame.daOffset())), regs::ra);
+    emitter->sd(Mem(sp, int32_t(frame.daOffset()) + 8), fp);
+    emitter->addi(fp, sp, int32_t(frame.finalStackSize()));
   }
 
   return kErrorOk;
@@ -115,20 +106,21 @@ Error EmitHelper::emitProlog(const FuncFrame& frame) {
 
 Error EmitHelper::emitEpilog(const FuncFrame& frame) {
   Emitter* emitter = _emitter->as<Emitter>();
-  const Gp& sp = riscv::sp;
-  const Gp& fp = riscv::fp;
+  const Gp& sp = regs::sp;
+  const Gp& fp = regs::fp;
 
   if (frame.hasPreservedFP()) {
-    emitter->ld(riscv::ra, Mem(sp, frame.raOffset()));
-    emitter->ld(fp, Mem(sp, frame.fpOffset()));
+    // TODO: [asmjit] This is a temporary fix, frame.daOffset() is not ideal.
+    emitter->ld(regs::ra, Mem(sp, int32_t(frame.daOffset())));
+    emitter->ld(fp, Mem(sp, int32_t(frame.daOffset()) + 8));
   }
 
-  int stackSize = frame.stackSize();
-  if (stackSize) {
-    emitter->addi(sp, sp, stackSize);
+  uint32_t stackAdjustment = frame._stackAdjustment;
+  if (stackAdjustment) {
+    emitter->addi(sp, sp, int32_t(stackAdjustment));
   }
 
-  emitter->ret();
+  emitter->jalr(regs::zero, regs::ra, 0);
   return kErrorOk;
 }
 

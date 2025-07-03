@@ -88,9 +88,17 @@ struct EmitterExplicitT {
   inline Error jal(const Label& o0) { return _emitter()->_emitI(Inst::kIdJal, regs::ra, o0); }
   inline Error nop() { return _emitter()->_emitI(Inst::kIdNop); }
   inline Error fence() { return _emitter()->_emitI(Inst::kIdFence); }
+  inline Error mv(Gp dst, Gp src) { return _emitter()->_emitI(Inst::kIdAdd, dst, src, regs::zero); }
 
   // ... more instructions will be added here
 };
+
+//!
+//! \note paste from a64emitter.h Emitter.
+class Emitter : public BaseEmitter, public EmitterExplicitT<Emitter> {
+  ASMJIT_NONCONSTRUCTIBLE(Emitter)
+};
+
 
 //! \}
 
