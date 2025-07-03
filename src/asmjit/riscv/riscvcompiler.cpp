@@ -48,10 +48,9 @@ Error Compiler::finalize() {
   ASMJIT_PROPAGATE(runPasses());
 
   Assembler a(_code);
-  a.setEmitterOptions(_emitterOptions);
-  a.addEncodingOptionsFrom(this);
+  a.addEncodingOptions(encodingOptions());
 
-  return serialize(&a);
+  return serializeTo(&a);
 }
 
 ASMJIT_END_SUB_NAMESPACE
