@@ -9,7 +9,7 @@
 #include "../core/api-config.h"
 #ifndef ASMJIT_NO_COMPILER
 
-#include "../core/compiler.hh"
+#include "../core/compiler.h"
 #include "../core/rabuilders_p.h"
 #include "../core/rapass_p.h"
 #include "../riscv/riscvassembler.h"

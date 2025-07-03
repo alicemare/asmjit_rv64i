@@ -6,9 +6,10 @@
 #include "../core/api-build_p.h"
 #ifndef ASMJIT_NO_COMPILER
 
-#include "../core/compiler.h"
-#include "../core/func.h"
+// #include "../riscv/riscvassembler.h"
 #include "../riscv/riscvcompiler.h"
+#include "riscvemithelper_p.h"
+#include "../riscv/riscvassembler.h"
 #include "../riscv/riscvrapass_p.h"
 
 ASMJIT_BEGIN_SUB_NAMESPACE(riscv)
@@ -18,7 +19,7 @@ ASMJIT_BEGIN_SUB_NAMESPACE(riscv)
 
 Compiler::Compiler(CodeHolder* code) noexcept : BaseCompiler() {
   if (code)
-    attach(code);
+    code->attach(this);
 }
 
 Compiler::~Compiler() noexcept {}
@@ -26,13 +27,31 @@ Compiler::~Compiler() noexcept {}
 // riscv::Compiler - Overrides
 // ===========================
 
-Error Compiler::onInit() noexcept {
-  addPassT<RISCVRAPass>();
-  return Base::onInit();
+Error Compiler::onAttach(CodeHolder& code) noexcept {
+  ASMJIT_PROPAGATE(Base::onAttach(code));
+  initEmitterFuncs(this);
+
+  Error err = addPassT<RISCVRAPass>();
+  if (err) {
+    onDetach(code);
+    return err;
+  }
+
+  return kErrorOk;
 }
 
-Error Compiler::onFini() noexcept {
-  return Base::onFini();
+Error Compiler::onDetach(CodeHolder& code) noexcept {
+  return Base::onDetach(code);
+}
+
+Error Compiler::finalize() {
+  ASMJIT_PROPAGATE(runPasses());
+
+  Assembler a(_code);
+  a.setEmitterOptions(_emitterOptions);
+  a.addEncodingOptionsFrom(this);
+
+  return serialize(&a);
 }
 
 ASMJIT_END_SUB_NAMESPACE
