@@ -14,6 +14,7 @@
 #include "../core/rapass_p.h"
 #include "../riscv/riscvassembler.h"
 #include "../riscv/riscvcompiler.h"
+#include "../riscv/riscvemithelper_p.h"
 
 ASMJIT_BEGIN_SUB_NAMESPACE(riscv)
 
@@ -26,6 +27,8 @@ class RISCVRAPass : public BaseRAPass {
 public:
   ASMJIT_NONCOPYABLE(RISCVRAPass)
   using Base = BaseRAPass;
+
+  EmitHelper _emitHelper;
 
   //! \name Construction & Destruction
   //! \{
@@ -40,14 +43,25 @@ public:
 
   ASMJIT_INLINE_NODEBUG Compiler* cc() const noexcept { return static_cast<Compiler*>(_cb); }
 
+  ASMJIT_INLINE_NODEBUG EmitHelper* emitHelper() noexcept { return &_emitHelper; }
+
   //! \}
 
-protected:
-  //! \name Overrides
+  //! \name Events
   //! \{
 
   void onInit() noexcept override;
   void onDone() noexcept override;
+
+  //! \}
+
+  Error buildCFG() noexcept override;
+  Error _rewrite(BaseNode* first, BaseNode* stop) noexcept override;
+  // Prolog & Epilog
+  Error updateStackFrame() noexcept override;
+
+  //! \name Emit Helper
+  //! \{
 
   Error emitMove(uint32_t workId, uint32_t dstPhysId, uint32_t srcPhysId) noexcept override;
   Error emitSwap(uint32_t aWorkId, uint32_t aPhysId, uint32_t bWorkId, uint32_t bPhysId) noexcept override;

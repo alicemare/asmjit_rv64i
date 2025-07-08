@@ -88,7 +88,20 @@ struct EmitterExplicitT {
   inline Error jal(const Label& o0) { return _emitter()->_emitI(Inst::kIdJal, regs::ra, o0); }
   inline Error nop() { return _emitter()->_emitI(Inst::kIdNop); }
   inline Error fence() { return _emitter()->_emitI(Inst::kIdFence); }
+  // some pseudo instructions
   inline Error mv(Gp dst, Gp src) { return _emitter()->_emitI(Inst::kIdAdd, dst, src, regs::zero); }
+  inline Error j(const Label& o0) { return _emitter()->_emitI(Inst::kIdJal, regs::zero, o0); }
+  inline Error li(Gp dst, Imm imm) {
+    if (imm.value() >= -2048 && imm.value() <= 2047) {
+      return _emitter()->_emitI(Inst::kIdAddi, dst, regs::zero, imm);
+    } else { // 对于大立即数，需要 lui+addi
+      uint64_t value = static_cast<uint64_t>(imm.value());
+      uint32_t hi = static_cast<uint32_t>((value + 0x800) >> 12) & 0xFFFFF;
+      int32_t lo = static_cast<int32_t>(value & 0xFFF);
+      _emitter()->_emitU(Inst::kIdLui, dst, Imm(hi));
+      return _emitter()->_emitU(Inst::kIdAuipc, dst, dst, Imm(lo));
+    }
+  }
 
   // ... more instructions will be added here
 };

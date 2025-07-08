@@ -101,7 +101,7 @@ public:
 
   ASMJIT_INLINE_CONSTEXPR Mem& operator=(const Mem& other) noexcept { copyFrom(other); return *this; }
 
-  ASMJIT_INLINE_CONSTEXPR Mem ptr(const Gp& baseReg, int32_t offset = 0) noexcept { return Mem(baseReg, offset); }
+  static constexpr Mem ptr(const Gp& baseReg, int32_t offset = 0) noexcept { return Mem(baseReg, offset); }
 
   //! \}
 
