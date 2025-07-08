@@ -11,6 +11,7 @@
 #include "../core/ralocal_p.h"
 #include "../core/formatter_p.h"
 #include "../riscv/riscvrapass_p.h"
+#include "../riscv/riscvinstapi_p.h"
 
 ASMJIT_BEGIN_SUB_NAMESPACE(riscv)
 

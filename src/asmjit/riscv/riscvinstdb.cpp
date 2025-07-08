@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: Zlib
 
 #include "../core/api-build_p.h"
+#include "../core/instdb_p.h"
 #include "../riscv/riscvinstdb.h"
 
 ASMJIT_BEGIN_SUB_NAMESPACE(riscv)

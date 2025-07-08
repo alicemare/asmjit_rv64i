@@ -83,6 +83,10 @@ public:
   ASMJIT_INLINE_CONSTEXPR Mem(const Mem& other) noexcept : BaseMem(other) {}
   //! Creates a memory operand based on `baseReg` and `offset`.
   ASMJIT_INLINE_CONSTEXPR Mem(const Gp& baseReg, int32_t offset = 0) noexcept : BaseMem(baseReg, offset) {}
+
+  ASMJIT_INLINE_NODEBUG explicit Mem(Globals::NoInit_) noexcept
+  : BaseMem(Globals::NoInit) {}
+
   // NOTE: RISC-V doesn't have [base + index + offset] addressing mode.
 
   //! \}

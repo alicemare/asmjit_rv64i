@@ -98,8 +98,8 @@ struct EmitterExplicitT {
       uint64_t value = static_cast<uint64_t>(imm.value());
       uint32_t hi = static_cast<uint32_t>((value + 0x800) >> 12) & 0xFFFFF;
       int32_t lo = static_cast<int32_t>(value & 0xFFF);
-      _emitter()->_emitU(Inst::kIdLui, dst, Imm(hi));
-      return _emitter()->_emitU(Inst::kIdAuipc, dst, dst, Imm(lo));
+      _emitter()->_emitI(Inst::kIdLui, dst, Imm(hi));
+      return _emitter()->_emitI(Inst::kIdAuipc, dst, dst, Imm(lo));
     }
   }
 
