@@ -19,6 +19,9 @@ class Gp : public UniGp {
 public:
   ASMJIT_DEFINE_ABSTRACT_REG(Gp, UniGp)
 
+  //! \name Constants
+  //! \{
+
   //! Special register id.
   enum Id : uint32_t {
     kIdZr = 0,      //!< Zero register `zero`.
@@ -29,6 +32,11 @@ public:
     kIdFp = 8       //!< Frame pointer `fp` (s0).
   };
 
+  //! \}
+
+  //! \name Static Constructors
+  //! \{
+
   //! Creates a new 32-bit GP register (W) having the given register id `regId`.
   [[nodiscard]]
   static ASMJIT_INLINE_CONSTEXPR Gp make_w(uint32_t regId) noexcept { return Gp(_signatureOf<RegType::kGp32>(), regId); }
@@ -37,13 +45,7 @@ public:
   [[nodiscard]]
   static ASMJIT_INLINE_CONSTEXPR Gp make_x(uint32_t regId) noexcept { return Gp(_signatureOf<RegType::kGp64>(), regId); }
 
-  //! Clones and casts this register to a 32-bit (W) register.
-  [[nodiscard]]
-  ASMJIT_INLINE_CONSTEXPR Gp w() const noexcept { return make_w(id()); }
-
-  //! Clones and casts this register to a 64-bit (X) register.
-  [[nodiscard]]
-  ASMJIT_INLINE_CONSTEXPR Gp x() const noexcept { return make_x(id()); }
+  //! \}
 };
 
 //! Vector register (RISC-V).
@@ -55,33 +57,33 @@ public:
 };
 
 //! Memory operand (RISC-V).
+//! RV64I only have one addressing type: [reg + imm]
+//! rs1 base register  + 12bit immediate offset
+//! Load, I-Type
+//! +-----------+-------+-------+-------+----------+
+//! | imm[11:0] | rs1   | funct3| rd    | opcode   |
+//! +-----------+-------+-------+-------+----------+
+//! 31        20 19    15 14   12 11   7 6         0
+//! Store, S-Type
+//! +-----------+-------+-------+-------+----------+----------+
+//! | imm[11:5] | rs2   | rs1   | funct3| imm[4:0] | opcode   |
+//! +-----------+-------+-------+-------+----------+----------+
+//! 31        25 24  20 19    15 14   12 11       7 6         0
 class Mem : public BaseMem {
 public:
+  enum AdditionalBits : uint32_t {
+    // Nothing specifit to RV64I
+  };
   //! \name Construction & Destruction
   //! \{
 
+  //! Creates a default memory operand that points to [0].
   ASMJIT_INLINE_CONSTEXPR Mem() noexcept : BaseMem() {}
+  //! Creates a copy of the `other` memory operand.
   ASMJIT_INLINE_CONSTEXPR Mem(const Mem& other) noexcept : BaseMem(other) {}
-  ASMJIT_INLINE_NODEBUG explicit Mem(Globals::NoInit_) noexcept : BaseMem(Globals::NoInit) {}
-
-  ASMJIT_INLINE_CONSTEXPR Mem(const Signature& signature, uint32_t baseId, uint32_t indexId, int32_t offset) noexcept
-    : BaseMem(signature, baseId, indexId, offset) {}
-
-  ASMJIT_INLINE_CONSTEXPR explicit Mem(const Label& base, int32_t off = 0, Signature signature = Signature{0}) noexcept
-    : BaseMem(Signature::fromOpType(OperandType::kMem) |
-              Signature::fromMemBaseType(RegType::kLabelTag) |
-              signature, base.id(), 0, off) {}
-
-  ASMJIT_INLINE_CONSTEXPR explicit Mem(const Gp& base, int64_t off = 0, Signature signature = Signature{0}) noexcept
-    : BaseMem(Signature::fromOpType(OperandType::kMem) |
-              Signature::fromMemBaseType(base.regType()) |
-              signature, base.id(), 0, int32_t(off)) {}
-
-  // NOTE: RISC-V doesn't have [base + index] addressing mode.
-
-  ASMJIT_INLINE_CONSTEXPR explicit Mem(uint64_t abs, Signature signature = Signature{0}) noexcept
-    : BaseMem(Signature::fromOpType(OperandType::kMem) |
-              signature, uint32_t(abs >> 32), 0, int32_t(uint32_t(abs & 0xFFFFFFFFu))) {}
+  //! Creates a memory operand based on `baseReg` and `offset`.
+  ASMJIT_INLINE_CONSTEXPR Mem(const Gp& baseReg, int32_t offset = 0) noexcept : BaseMem(baseReg, offset) {}
+  // NOTE: RISC-V doesn't have [base + index + offset] addressing mode.
 
   //! \}
 
@@ -94,10 +96,12 @@ public:
   ASMJIT_INLINE_NODEBUG Reg baseReg() const noexcept { return Reg::fromTypeAndId(baseType(), baseId()); }
   //! \}
 
-  //! \name Overloaded Operators
+  //! \name
   //! \{
 
   ASMJIT_INLINE_CONSTEXPR Mem& operator=(const Mem& other) noexcept { copyFrom(other); return *this; }
+
+  ASMJIT_INLINE_CONSTEXPR Mem ptr(const Gp& baseReg, int32_t offset = 0) noexcept { return Mem(baseReg, offset); }
 
   //! \}
 
@@ -162,6 +166,49 @@ static constexpr Gp tp = x4;
 static constexpr Gp fp = x8;
 
 } // {regs}
+
+//! Register IDs.
+//!
+//! \note Register IDs are compatible with the RISC-V specification.
+enum RegId : uint32_t {
+  kIdZero = 0,    //!< Zero register (x0).
+  kIdRa   = 1,    //!< Return address register (x1).
+  kIdSp   = 2,    //!< Stack pointer register (x2).
+  kIdGp   = 3,    //!< Global pointer register (x3).
+  kIdTp   = 4,    //!< Thread pointer register (x4).
+  kIdT0   = 5,    //!< Temporary register (x5).
+  kIdT1   = 6,    //!< Temporary register (x6).
+  kIdT2   = 7,    //!< Temporary register (x7).
+  kIdFp   = 8,    //!< Frame pointer register (x8) / Saved register (s0).
+  kIdS1   = 9,    //!< Saved register (x9).
+  kIdA0   = 10,   //!< Function argument / return value register (x10).
+  kIdA1   = 11,   //!< Function argument / return value register (x11).
+  kIdA2   = 12,   //!< Function argument register (x12).
+  kIdA3   = 13,   //!< Function argument register (x13).
+  kIdA4   = 14,   //!< Function argument register (x14).
+  kIdA5   = 15,   //!< Function argument register (x15).
+  kIdA6   = 16,   //!< Function argument register (x16).
+  kIdA7   = 17,   //!< Function argument register (x17).
+  kIdS2   = 18,   //!< Saved register (x18).
+  kIdS3   = 19,   //!< Saved register (x19).
+  kIdS4   = 20,   //!< Saved register (x20).
+  kIdS5   = 21,   //!< Saved register (x21).
+  kIdS6   = 22,   //!< Saved register (x22).
+  kIdS7   = 23,   //!< Saved register (x23).
+  kIdS8   = 24,   //!< Saved register (x24).
+  kIdS9   = 25,   //!< Saved register (x25).
+  kIdS10  = 26,   //!< Saved register (x26).
+  kIdS11  = 27,   //!< Saved register (x27).
+  kIdT3   = 28,   //!< Temporary register (x28).
+  kIdT4   = 29,   //!< Temporary register (x29).
+  kIdT5   = 30,   //!< Temporary register (x30).
+  kIdT6   = 31,   //!< Temporary register (x31).
+
+  //! Count of registers.
+  kRegCount = 32
+};
+
+//! \}
 
 //! \}
 
