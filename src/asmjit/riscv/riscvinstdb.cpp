@@ -59,67 +59,65 @@ const InstInfo _instInfoTable[] = {
   { (uint32_t)EncodingType::kNone, 0, 0, kRW_None, 0 }, // kIdNone
 
   // RV32I/RV64I Base Instruction Set
-  // Arthmetic
+  // R-Type
   R(0b0110011, 0b000, 0b0000000, kRW_r_r_r), // kIdAdd
-  I(0b0010011, 0b000, kRW_r_r_imm), // kIdAddi
-  R(0b0110011, 0b000, 0b0100000, kRW_r_r_r), // kIdSub
-  // Compare
-  R(0b0110011, 0b010, 0b0000000, kRW_r_r_r), // kIdSlt
-  I(0b0010011, 0b010, kRW_r_r_imm), // kIdSlti
-  R(0b0110011, 0b011, 0b0000000, kRW_r_r_r), // kIdSltu
-  I(0b0010011, 0b011, kRW_r_r_imm), // kIdSltiu
-  // Logical
-  R(0b0110011, 0b111, 0b0000000, kRW_r_r_r), // kIdAnd
-  I(0b0010011, 0b111, kRW_r_r_imm), // kIdAndi
-  R(0b0110011, 0b110, 0b0000000, kRW_r_r_r), // kIdOr
-  I(0b0010011, 0b110, kRW_r_r_imm), // kIdOri
-  R(0b0110011, 0b100, 0b0000000, kRW_r_r_r), // kIdXor
-  I(0b0010011, 0b100, kRW_r_r_imm), // kIdXOri
-  // Shift
-  R(0b0110011, 0b001, 0b0000000, kRW_r_r_r), // kIdSll
-  I(0b0010011, 0b001, kRW_r_r_imm), // kIdSlli
-  R(0b0110011, 0b101, 0b0000000, kRW_r_r_r), // kIdSrl
-  I(0b0010011, 0b101, kRW_r_r_imm), // kIdSrli
-  R(0b0110011, 0b101, 0b0100000, kRW_r_r_r), // kIdSra
-  I(0b0010011, 0b101, kRW_r_r_imm), // kIdSrai
-  // RV64I 32bit extension
   R(0b0111011, 0b000, 0b0000000, kRW_r_r_r), // kIdAddw
-  I(0b0011011, 0b000, kRW_r_r_imm), // kIdAddiw
+  R(0b0110011, 0b000, 0b0100000, kRW_r_r_r), // kIdSub
   R(0b0111011, 0b000, 0b0100000, kRW_r_r_r), // kIdSubw
+  R(0b0110011, 0b001, 0b0000000, kRW_r_r_r), // kIdSll
   R(0b0111011, 0b001, 0b0000000, kRW_r_r_r), // kIdSllw
-  I(0b0011011, 0b001, kRW_r_r_imm), // kIdSlliw
+  R(0b0110011, 0b101, 0b0000000, kRW_r_r_r), // kIdSrl
   R(0b0111011, 0b101, 0b0000000, kRW_r_r_r), // kIdSrlw
-  I(0b0011011, 0b101, kRW_r_r_imm), // kIdSrliw
+  R(0b0110011, 0b101, 0b0100000, kRW_r_r_r), // kIdSra
   R(0b0111011, 0b101, 0b0100000, kRW_r_r_r), // kIdSraw
+  R(0b0110011, 0b010, 0b0000000, kRW_r_r_r), // kIdSlt
+  R(0b0110011, 0b011, 0b0000000, kRW_r_r_r), // kIdSltu
+  R(0b0110011, 0b111, 0b0000000, kRW_r_r_r), // kIdAnd
+  R(0b0110011, 0b110, 0b0000000, kRW_r_r_r), // kIdOr
+  R(0b0110011, 0b100, 0b0000000, kRW_r_r_r), // kIdXor
+  // I-Type
+  I(0b0010011, 0b000, kRW_r_r_imm), // kIdAddi
+  I(0b0011011, 0b000, kRW_r_r_imm), // kIdAddiw
+  I(0b0010011, 0b010, kRW_r_r_imm), // kIdSlti
+  I(0b0010011, 0b011, kRW_r_r_imm), // kIdSltiu
+  I(0b0010011, 0b111, kRW_r_r_imm), // kIdAndi
+  I(0b0010011, 0b110, kRW_r_r_imm), // kIdOri
+  I(0b0010011, 0b100, kRW_r_r_imm), // kIdXOri
+  I(0b0010011, 0b001, kRW_r_r_imm), // kIdSlli
+  I(0b0011011, 0b001, kRW_r_r_imm), // kIdSlliw
+  I(0b0010011, 0b101, kRW_r_r_imm), // kIdSrli
+  I(0b0011011, 0b101, kRW_r_r_imm), // kIdSrliw
+  I(0b0010011, 0b101, kRW_r_r_imm), // kIdSrai
   I(0b0011011, 0b101, kRW_r_r_imm), // kIdSraiw
+  I(0b1100111, 0b000, kRW_r_r_imm), // kIdJalr
   // Load
-  I(0b0000011, 0b000, kRW_r_mem, InstFlags::kIsLoad), // kIdLb
-  I(0b0000011, 0b001, kRW_r_mem, InstFlags::kIsLoad), // kIdLh
-  I(0b0000011, 0b010, kRW_r_mem, InstFlags::kIsLoad), // kIdLw
-  I(0b0000011, 0b100, kRW_r_mem, InstFlags::kIsLoad), // kIdLbu
-  I(0b0000011, 0b101, kRW_r_mem, InstFlags::kIsLoad), // kIdLhu
-  I(0b0000011, 0b110, kRW_r_mem, InstFlags::kIsLoad), // kIdLwu
-  I(0b0000011, 0b011, kRW_r_mem, InstFlags::kIsLoad), // kIdLd
-  // Store
-  S(0b0100011, 0b000, kRW_mem_r, InstFlags::kIsStore), // kIdSb
-  S(0b0100011, 0b001, kRW_mem_r, InstFlags::kIsStore), // kIdSh
-  S(0b0100011, 0b010, kRW_mem_r, InstFlags::kIsStore), // kIdSw
-  S(0b0100011, 0b011, kRW_mem_r, InstFlags::kIsStore), // kIdSd
-  // Branch
+  I(0b0000011, 0b000, kRW_r_mem), // kIdLb
+  I(0b0000011, 0b001, kRW_r_mem), // kIdLh
+  I(0b0000011, 0b010, kRW_r_mem), // kIdLw
+  I(0b0000011, 0b100, kRW_r_mem), // kIdLbu
+  I(0b0000011, 0b101, kRW_r_mem), // kIdLhu
+  I(0b0000011, 0b110, kRW_r_mem), // kIdLwu
+  I(0b0000011, 0b011, kRW_r_mem), // kIdLd
+  // S-Type
+  S(0b0100011, 0b000, kRW_mem_r), // kIdSb
+  S(0b0100011, 0b001, kRW_mem_r), // kIdSh
+  S(0b0100011, 0b010, kRW_mem_r), // kIdSw
+  S(0b0100011, 0b011, kRW_mem_r), // kIdSd
+  // B-Type
   B(0b1100011, 0b000, kRW_r_r_label), // kIdBeq
   B(0b1100011, 0b001, kRW_r_r_label), // kIdBne
   B(0b1100011, 0b100, kRW_r_r_label), // kIdBlt
   B(0b1100011, 0b101, kRW_r_r_label), // kIdBge
   B(0b1100011, 0b110, kRW_r_r_label), // kIdBltu
   B(0b1100011, 0b111, kRW_r_r_label), // kIdBgeu
-  // Jump
-  J(0b1101111, kRW_r_label), // kIdJal
-  I(0b1100111, 0b000, kRW_r_r_imm, InstFlags::kIsJump), // kIdJalr
-  // Others
+  // U-Type
   U(0b0110111, kRW_None), // kIdLui
   U(0b0010111, kRW_None), // kIdAuipc
+  // J-Type
+  J(0b1101111, kRW_r_label), // kIdJal
+  // Others
+  I(0b0010011, 0b000, kRW_None), // kIdNop
   I(0b0001111, 0b000, kRW_fence), // kIdFence
-  I(0b0010011, 0b000, kRW_None) // kIdNop
 };
 // ${InstInfo:End}
 }

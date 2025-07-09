@@ -679,8 +679,8 @@ if (NOT ASMJIT_EMBED)
                         CFLAGS_REL ${ASMJIT_PRIVATE_CFLAGS_REL})
     endif()
 
-    foreach(_target test_compiler_func
-                    test_compiler_a64
+    foreach(_target test_assembler
+                    test_compiler
             )
       asmjit_add_target(${_target} TEST
                         SOURCES    test/riscv/${_target}.cpp

@@ -106,7 +106,7 @@ ASMJIT_INLINE_NODEBUG bool isSType(InstId id) {
 
 [[nodiscard]]
 ASMJIT_INLINE_NODEBUG bool isBType(InstId id) {
-  return id >= kIdBeq && id <= kIdJalr;
+  return id >= kIdBeq && id <= kIdBgeu;
 }
 
 [[nodiscard]]

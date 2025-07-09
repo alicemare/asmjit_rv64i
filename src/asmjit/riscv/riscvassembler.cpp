@@ -12,22 +12,6 @@
 
 ASMJIT_BEGIN_SUB_NAMESPACE(riscv)
 
-// Helper
-// RV64I ISA
-// R-Type (Register-to-Register):
-// [funct7 | rs2 | rs1 | funct3 | rd | opcode]
-// I-Type (Immediate):
-// [immediate[11:0] | rs1 | funct3 | rd | opcode]
-// S-Type (Store):
-// [immediate[11:5] | rs2 | rs1 | funct3 | immediate[4:0] | opcode]
-// B-Type (Branch):
-// [immediate[12|10:5] | rs2 | rs1 | funct3 | immediate[4:1|11] | opcode]
-// U-Type (Upper Immediate):
-// [immediate[31:12] | rd | opcode]
-// J-Type (Conditional Jump):
-// [immediate[20|10:1|11|19:12] | rd | opcode]
-
-
 // riscv::Assembler - Construction & Destruction
 // ============================================
 
@@ -52,6 +36,7 @@ Error Assembler::_emit(InstId instId, const Operand_& o0, const Operand_& o1, co
 
   switch (info.encoding()) {
     case InstDB::EncodingType::kR: {
+      // [funct7 | rs2 | rs1 | funct3 | rd | opcode]
       const Gp& rd = o0.as<Gp>();
       const Gp& rs1 = o1.as<Gp>();
       const Gp& rs2 = o2.as<Gp>();
@@ -66,6 +51,7 @@ Error Assembler::_emit(InstId instId, const Operand_& o0, const Operand_& o1, co
     }
 
     case InstDB::EncodingType::kI: {
+      // [immediate[11:0] | rs1 | funct3 | rd | opcode]
       const Gp& rd = o0.as<Gp>();
       uint32_t rs1_id;
       int64_t immValue;
@@ -94,14 +80,15 @@ Error Assembler::_emit(InstId instId, const Operand_& o0, const Operand_& o1, co
     }
 
     case InstDB::EncodingType::kS: {
-      const Mem& mem = o0.as<Mem>();
-      const Gp& rs2 = o1.as<Gp>();
+      // [immediate[11:5] | rs2 | rs1 | funct3 | immediate[4:0] | opcode]
+      const Mem& mem = o1.as<Mem>();  // rs2 是 o0
+      const Gp& rs2 = o0.as<Gp>();
 
       if (!mem.hasBaseReg())
         return DebugUtils::errored(kErrorInvalidInstruction);
 
-      const Gp& rs1 = mem.baseReg().as<Gp>();
-      int64_t offset = mem.offset();
+      const Gp& rs1 = mem.baseReg().as<Gp>(); // 脱裤子放屁，可以直接rs1 = o1.as<Gp>
+      int64_t offset = o2.as<Imm>().value();
 
       //if (!Support::isSigned<12>(offset))
       //  return DebugUtils::errored(kErrorInvalidDisplacement);
@@ -119,6 +106,7 @@ Error Assembler::_emit(InstId instId, const Operand_& o0, const Operand_& o1, co
     }
 
     case InstDB::EncodingType::kB: {
+      // [immediate[12|10:5] | rs2 | rs1 | funct3 | immediate[4:1|11] | opcode]
       const Gp& rs1 = o0.as<Gp>();
       const Gp& rs2 = o1.as<Gp>();
       const Imm& imm = o2.as<Imm>();
@@ -145,20 +133,22 @@ Error Assembler::_emit(InstId instId, const Operand_& o0, const Operand_& o1, co
     }
 
     case InstDB::EncodingType::kU: {
+      // [immediate[31:12] | rd | opcode]
       const Gp& rd = o0.as<Gp>();
       const Imm& imm = o1.as<Imm>();
       int64_t immValue = imm.value();
 
-      if (immValue < 0 || immValue >= (1 << 20))
-        return DebugUtils::errored(kErrorInvalidImmediate);
+      //if (immValue < 0 || immValue >= (1 << 20))
+      //  return DebugUtils::errored(kErrorInvalidImmediate);
 
       opcode = info.opcode() |
                (uint32_t(rd.id()) << 7) |
-               ((uint32_t(immValue) & 0xFFFFF) << 12);
+               ((uint32_t(immValue) << 12) << 12);
       break;
     }
 
     case InstDB::EncodingType::kJ: {
+      // [immediate[20|10:1|11|19:12] | rd | opcode]
       const Gp& rd = o0.as<Gp>();
       const Imm& imm = o1.as<Imm>();
       int64_t offset = imm.value();
