@@ -15,6 +15,8 @@ ASMJIT_BEGIN_SUB_NAMESPACE(riscv)
 // ============================================
 
 Assembler::Assembler(CodeHolder* code) noexcept : BaseAssembler() {
+  _archMask = uint64_t(1) << uint32_t(Arch::kRISCV64);
+  initEmitterFuncs(this);
   if (code)
     code->attach(this);
 }
@@ -163,7 +165,7 @@ Error Assembler::_emit(InstId instId, const Operand_& o0, const Operand_& o1, co
       return DebugUtils::errored(kErrorInvalidInstruction);
   }
 
-  // TODO: EmitHelper::emit(opcode);
+  _codeWriter.emitd(opcode);
   return kErrorOk;
 }
 

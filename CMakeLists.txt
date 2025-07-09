@@ -508,10 +508,17 @@ set(ASMJIT_SRC_LIST
   asmjit/riscv/riscvemitter.h
   asmjit/riscv/riscvinstdb.cpp
   asmjit/riscv/riscvinstdb.h
+  asmjit/riscv/riscvassembler.h
+  asmjit/riscv/riscvassembler.cpp
   asmjit/riscv/riscvcompiler.h
   asmjit/riscv/riscvcompiler.cpp
   asmjit/riscv/riscvrapass_p.h
   asmjit/riscv/riscvrapass.cpp
+  asmjit/riscv/riscvemithelper_p.h
+  asmjit/riscv/riscvemithelper.cpp
+  asmjit/riscv/riscvinstapi_p.h
+  asmjit/riscv/riscvinstapi.cpp
+
   asmjit/x86.h
   asmjit/x86/x86archtraits_p.h
   asmjit/x86/x86assembler.cpp
@@ -671,6 +678,17 @@ if (NOT ASMJIT_EMBED)
                         CFLAGS_DBG ${ASMJIT_PRIVATE_CFLAGS_DBG}
                         CFLAGS_REL ${ASMJIT_PRIVATE_CFLAGS_REL})
     endif()
+
+    foreach(_target test_compiler_func
+                    test_compiler_a64
+            )
+      asmjit_add_target(${_target} TEST
+                        SOURCES    test/riscv/${_target}.cpp
+                        LIBRARIES  asmjit::asmjit
+                        CFLAGS     ${ASMJIT_PRIVATE_CFLAGS}
+                        CFLAGS_DBG ${ASMJIT_PRIVATE_CFLAGS_DBG}
+                        CFLAGS_REL ${ASMJIT_PRIVATE_CFLAGS_REL})
+    endforeach()
 
     if (NOT (ASMJIT_NO_BUILDER OR ASMJIT_NO_COMPILER))
       # Vectorcall tests and XMM tests require at least SSE2 in 32-bit mode (in 64-bit mode it's implicit).

@@ -18,6 +18,10 @@ ASMJIT_BEGIN_SUB_NAMESPACE(riscv)
 // ============================================
 
 Compiler::Compiler(CodeHolder* code) noexcept : BaseCompiler() {
+  _archMask = uint64_t(1) << uint32_t(Arch::kRISCV64);
+  _environment.setArch(Arch::kRISCV64);
+  initEmitterFuncs(this);
+
   if (code)
     code->attach(this);
 }
