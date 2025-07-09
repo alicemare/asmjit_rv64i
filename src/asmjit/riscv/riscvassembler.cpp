@@ -5,11 +5,28 @@
 
 #include "../core/api-build_p.h"
 #include "../core/support.h"
+#include "../core/codewriter_p.h"
 #include "../riscv/riscvassembler.h"
 #include "../riscv/riscvinstdb.h"
 #include "../riscv/riscvemithelper_p.h"
 
 ASMJIT_BEGIN_SUB_NAMESPACE(riscv)
+
+// Helper
+// RV64I ISA
+// R-Type (Register-to-Register):
+// [funct7 | rs2 | rs1 | funct3 | rd | opcode]
+// I-Type (Immediate):
+// [immediate[11:0] | rs1 | funct3 | rd | opcode]
+// S-Type (Store):
+// [immediate[11:5] | rs2 | rs1 | funct3 | immediate[4:0] | opcode]
+// B-Type (Branch):
+// [immediate[12|10:5] | rs2 | rs1 | funct3 | immediate[4:1|11] | opcode]
+// U-Type (Upper Immediate):
+// [immediate[31:12] | rd | opcode]
+// J-Type (Conditional Jump):
+// [immediate[20|10:1|11|19:12] | rd | opcode]
+
 
 // riscv::Assembler - Construction & Destruction
 // ============================================
@@ -29,6 +46,9 @@ Assembler::~Assembler() noexcept {}
 Error Assembler::_emit(InstId instId, const Operand_& o0, const Operand_& o1, const Operand_& o2, const Operand_* opExt) {
   const InstDB::InstInfo& info = InstDB::infoById(instId);
   uint32_t opcode = 0;
+  CodeWriter writer(this);
+  Error err = kErrorOk;
+  err = writer.ensureSpace(this, 4);  // reserve 32bit
 
   switch (info.encoding()) {
     case InstDB::EncodingType::kR: {
@@ -164,9 +184,12 @@ Error Assembler::_emit(InstId instId, const Operand_& o0, const Operand_& o1, co
     default:
       return DebugUtils::errored(kErrorInvalidInstruction);
   }
+  writer.emit32uLE(opcode);
 
-  _codeWriter.emitd(opcode);
-  return kErrorOk;
+  resetState();
+
+  writer.done(this);
+  return err;
 }
 
 // riscv::Assembler - Align
