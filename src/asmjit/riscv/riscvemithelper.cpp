@@ -68,7 +68,7 @@ Error EmitHelper::emitRegMove(const Operand_& dst_, const Operand_& src_, TypeId
   }
 
   if (dst_.isReg() && src_.isReg()) {
-    return emitter->mv(dst_.as<Gp>(), src_.as<Gp>());
+    return emitter->mov(dst_.as<Gp>(), src_.as<Gp>());
   }
 
   emitter->setInlineComment(nullptr);

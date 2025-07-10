@@ -89,7 +89,7 @@ struct EmitterExplicitT {
   inline Error nop() { return _emitter()->_emitI(Inst::kIdNop); }
   inline Error fence() { return _emitter()->_emitI(Inst::kIdFence); }
   // some pseudo instructions
-  inline Error mv(Gp dst, Gp src) { return _emitter()->_emitI(Inst::kIdAdd, dst, src, regs::zero); }
+  inline Error mov(Gp dst, Gp src) { return _emitter()->_emitI(Inst::kIdAdd, dst, src, regs::zero); }
   inline Error j(const Label& o0) { return _emitter()->_emitI(Inst::kIdJal, regs::zero, o0); }
   inline Error li(Gp dst, Imm imm) {
     if (imm.value() >= -2048 && imm.value() <= 2047) {

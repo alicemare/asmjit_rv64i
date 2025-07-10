@@ -38,10 +38,10 @@ public:
   //! \{
 
   //! \cond INTERNAL
-  template<typename RegT, typename Type>
-  ASMJIT_INLINE_NODEBUG RegT _newRegInternal(const Type& type) {
+  template<typename RegT, typename Type, typename... Args>
+  ASMJIT_INLINE_NODEBUG RegT _newRegInternal(const Type& type, Args&&... args) {
     RegT reg(Globals::NoInit);
-    _newReg(&reg, type, nullptr);
+    _newReg(&reg, type, std::forward<Args>(args)...);
     return reg;
   }
   //! \endcond
