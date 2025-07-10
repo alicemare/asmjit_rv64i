@@ -518,6 +518,8 @@ set(ASMJIT_SRC_LIST
   asmjit/riscv/riscvemithelper.cpp
   asmjit/riscv/riscvinstapi_p.h
   asmjit/riscv/riscvinstapi.cpp
+  asmjit/riscv/riscvfunc_p.h
+  asmjit/riscv/riscvfunc.cpp
 
   asmjit/x86.h
   asmjit/x86/x86archtraits_p.h
@@ -681,6 +683,8 @@ if (NOT ASMJIT_EMBED)
 
     foreach(_target test_assembler
                     test_compiler
+                    test_compiler2
+                    test_compiler2_a64
             )
       asmjit_add_target(${_target} TEST
                         SOURCES    test/riscv/${_target}.cpp
