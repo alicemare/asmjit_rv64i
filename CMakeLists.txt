@@ -644,6 +644,7 @@ if (NOT ASMJIT_EMBED)
                                  test/asmjit_test_assembler_a64.cpp
                                  test/asmjit_test_assembler_x64.cpp
                                  test/asmjit_test_assembler_x86.cpp
+                                 test/asmjit_test_assembler_riscv.cpp
                       LIBRARIES  asmjit::asmjit
                       CFLAGS     ${ASMJIT_PRIVATE_CFLAGS}
                       CFLAGS_DBG ${ASMJIT_PRIVATE_CFLAGS_DBG}
@@ -682,7 +683,6 @@ if (NOT ASMJIT_EMBED)
     endif()
 
     foreach(_target test_assembler
-                    test_compiler
                     test_compiler2
                     test_compiler2_a64
             )

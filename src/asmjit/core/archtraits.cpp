@@ -16,6 +16,10 @@
   #include "../arm/a64archtraits_p.h"
 #endif
 
+#if !defined(ASMJIT_NO_RISCV)
+  #include "../riscv/riscvarchtraits_p.h"
+#endif
+
 ASMJIT_BEGIN_NAMESPACE
 
 static const constexpr ArchTraits noArchTraits = {
@@ -69,10 +73,13 @@ ASMJIT_VARAPI const ArchTraits _archTraits[uint32_t(Arch::kMaxValue) + 1] = {
   noArchTraits,
 #endif
 
-  // RISCV32/RISCV64 architectures.
+// RISCV32/RISCV64 architectures.
+noArchTraits,
+#if !defined(ASMJIT_NO_RISCV)
+  riscv::riscvArchTraits,
+#else
   noArchTraits,
-  noArchTraits,
-
+#endif
   // ARM architecture
   noArchTraits,
 
