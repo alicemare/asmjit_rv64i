@@ -107,6 +107,8 @@ public:
 
   static constexpr Mem ptr(const Gp& baseReg, int32_t offset = 0) noexcept { return Mem(baseReg, offset); }
 
+  static constexpr Mem ptr(const Gp& baseReg, Label label) noexcept { return Mem(baseReg, 0); } // toodo
+
   //! \}
 
   //! \name Clone

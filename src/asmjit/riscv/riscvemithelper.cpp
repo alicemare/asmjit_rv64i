@@ -52,16 +52,16 @@ Error EmitHelper::emitRegMove(const Operand_& dst_, const Operand_& src_, TypeId
     switch (typeId) {
       case TypeId::kInt8:
       case TypeId::kUInt8:
-        return emitter->sb(dst, src.as<Gp>());
+        return emitter->sb(src.as<Gp>(), dst);
       case TypeId::kInt16:
       case TypeId::kUInt16:
-        return emitter->sh(dst, src.as<Gp>());
+        return emitter->sh(src.as<Gp>(), dst);
       case TypeId::kInt32:
       case TypeId::kUInt32:
-        return emitter->sw(dst, src.as<Gp>());
+        return emitter->sw(src.as<Gp>(), dst);
       case TypeId::kInt64:
       case TypeId::kUInt64:
-        return emitter->sd(dst, src.as<Gp>());
+        return emitter->sd(src.as<Gp>(), dst);
       default:
         break;
     }
@@ -94,10 +94,10 @@ Error EmitHelper::emitProlog(const FuncFrame& frame) {
   if (stackAdjustment)
     emitter->addi(sp, sp, -int32_t(stackAdjustment));
 
-  if (frame.hasPreservedFP()) {
+  if (frame.hasPreservedFP()) { // 重点排查这里的问题！
     // TODO: [asmjit] This is a temporary fix, frame.daOffset() is not ideal.
-    emitter->sd(Mem(sp, int32_t(frame.daOffset())), regs::ra);
-    emitter->sd(Mem(sp, int32_t(frame.daOffset()) + 8), fp);
+    emitter->sd(regs::ra, Mem(sp, int32_t(frame.daOffset())));
+    emitter->sd(fp, Mem(sp, int32_t(frame.daOffset()) + 8));
     emitter->addi(fp, sp, int32_t(frame.finalStackSize()));
   }
 

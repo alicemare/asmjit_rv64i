@@ -32,7 +32,7 @@ Error Assembler::_emit(InstId instId, const Operand_& o0, const Operand_& o1, co
   uint32_t opcode = 0;
   CodeWriter writer(this);
   Error err = kErrorOk;
-  err = writer.ensureSpace(this, 4);  // reserve 32bit
+  err = writer.ensureSpace(this, 4);  // reserve 32bit for each Instruction
 
   switch (info.encoding()) {
     case InstDB::EncodingType::kR: {
@@ -52,25 +52,25 @@ Error Assembler::_emit(InstId instId, const Operand_& o0, const Operand_& o1, co
 
     case InstDB::EncodingType::kI: {
       // [immediate[11:0] | rs1 | funct3 | rd | opcode]
+      // [shtyp[11:5]] | imm[4:0] | rs1 | func3 | rd | opcode] 
       const Gp& rd = o0.as<Gp>();
       uint32_t rs1_id;
-      int64_t immValue;
+      uint32_t imm12;
 
       if (info.hasFlag(InstDB::kIsLoad)) {
         const Mem& mem = o1.as<Mem>();
         if (!mem.hasBaseReg())
           return DebugUtils::errored(kErrorInvalidInstruction);
         rs1_id = mem.baseId();
-        immValue = mem.offset();
+        imm12 = uint32_t(mem.offset());
       } else {
         rs1_id = o1.as<Gp>().id();
-        immValue = o2.as<Imm>().value();
+        imm12 = (o2.as<Imm>().value() & 0xff) | (info.funct7() << 5);
       }
 
       //if (!Support::isSigned<12>(immValue))
       //  return DebugUtils::errored(kErrorInvalidImmediate);
 
-      uint32_t imm12 = uint32_t(immValue) & 0xFFF;
       opcode = info.opcode() |
                (uint32_t(rd.id()) << 7) |
                (info.funct3() << 12) |
@@ -81,25 +81,25 @@ Error Assembler::_emit(InstId instId, const Operand_& o0, const Operand_& o1, co
 
     case InstDB::EncodingType::kS: {
       // [immediate[11:5] | rs2 | rs1 | funct3 | immediate[4:0] | opcode]
-      const Mem& mem = o1.as<Mem>();  // rs2 是 o0
+      const Mem& rs1 = o1.as<Mem>();
       const Gp& rs2 = o0.as<Gp>();
 
-      if (!mem.hasBaseReg())
+      if (!rs1.hasBaseReg())
         return DebugUtils::errored(kErrorInvalidInstruction);
 
-      const Gp& rs1 = mem.baseReg().as<Gp>(); // 脱裤子放屁，可以直接rs1 = o1.as<Gp>
-      int64_t offset = o2.as<Imm>().value();
+      uint32_t rs1_id = rs1.baseId();
+      int64_t immValue = rs1.offset();
 
       //if (!Support::isSigned<12>(offset))
       //  return DebugUtils::errored(kErrorInvalidDisplacement);
 
-      uint32_t imm11_5 = (uint32_t(offset) >> 5) & 0x7F;
-      uint32_t imm4_0 = uint32_t(offset) & 0x1F;
+      uint32_t imm11_5 = (uint32_t(immValue) >> 5) & 0x7F;
+      uint32_t imm4_0 = uint32_t(immValue) & 0x1F;
 
       opcode = info.opcode() |
                (imm4_0 << 7) |
                (info.funct3() << 12) |
-               (uint32_t(rs1.id()) << 15) |
+               (uint32_t(rs1_id) << 15) |
                (uint32_t(rs2.id()) << 20) |
                (imm11_5 << 25);
       break;
@@ -109,17 +109,16 @@ Error Assembler::_emit(InstId instId, const Operand_& o0, const Operand_& o1, co
       // [immediate[12|10:5] | rs2 | rs1 | funct3 | immediate[4:1|11] | opcode]
       const Gp& rs1 = o0.as<Gp>();
       const Gp& rs2 = o1.as<Gp>();
-      const Imm& imm = o2.as<Imm>();
-      int64_t offset = imm.value();
+      const Label& lab = o2.as<Label>(); // todo, Label to Offset
+      int64_t offset = lab.id();
 
       //if ((offset & 1) != 0 || !Support::isSigned<13>(offset))
       //  return DebugUtils::errored(kErrorInvalidDisplacement);
 
-      uint32_t uimm = uint32_t(offset);
-      uint32_t imm11   = (uimm >> 11) & 1;
-      uint32_t imm4_1  = (uimm >> 1) & 0xF;
-      uint32_t imm10_5 = (uimm >> 5) & 0x3F;
-      uint32_t imm12   = (uimm >> 12) & 1;
+      uint32_t imm11   = (offset >> 11) & 1;
+      uint32_t imm4_1  = (offset >> 1) & 0xF;
+      uint32_t imm10_5 = (offset >> 5) & 0x3F;
+      uint32_t imm12   = (offset >> 12) & 1;
 
       opcode = info.opcode() |
                (imm11 << 7) |
@@ -143,7 +142,7 @@ Error Assembler::_emit(InstId instId, const Operand_& o0, const Operand_& o1, co
 
       opcode = info.opcode() |
                (uint32_t(rd.id()) << 7) |
-               ((uint32_t(immValue) << 12) << 12);
+               (uint32_t(immValue) << 12);
       break;
     }
 

@@ -139,7 +139,8 @@ enum InstFlags : uint16_t {
   kIsLoad = 0x0001u,
   kIsStore = 0x0002u,
   kIsJump = 0x0004u,
-  kIsBranch = 0x0008u
+  kIsBranch = 0x0008u,
+  kIsShift = 0x0010u,
 };
 
 //! Instruction information (RISC-V).
@@ -148,7 +149,7 @@ struct InstInfo {
   uint32_t _encoding : 8;
   uint32_t _opcode : 7;
   uint32_t _funct3 : 3;
-  uint32_t _funct7 : 7;
+  uint32_t _funct7 : 7; // R-Type func7, I-Type shtyp
   uint32_t _reserved : 7;
 
   uint16_t _rwInfoIndex;

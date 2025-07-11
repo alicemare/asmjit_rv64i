@@ -474,7 +474,7 @@ Error RACFGBuilder::moveRegToStackArg(InvokeNode* invokeNode, const FuncValue& a
   Mem stackPtr = Mem::ptr(_pass->_sp.as<Gp>(), arg.stackOffset());
 
   if (reg.isGp()) {
-    return cc()->sd(stackPtr, reg.as<Gp>());
+    return cc()->sd(reg.as<Gp>(), stackPtr);
   }
 
   // RISC-V RV64I doesn't have vector registers

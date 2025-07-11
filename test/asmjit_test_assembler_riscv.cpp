@@ -53,27 +53,42 @@ static void ASMJIT_NOINLINE testRISCVAssemblerBase(AssemblerTester<riscv::Assemb
     TEST_INSTRUCTION("9B1D2E00", slliw(x27, x28, 2));
     TEST_INSTRUCTION("935E1F00", srli(x29, x30, 1));
     TEST_INSTRUCTION("1BDF2F00", srliw(x30, x31, 2));
-    TEST_INSTRUCTION("935F3040", srai(x31, x0, 3));
+    TEST_INSTRUCTION("935F0040", srai(x31, x0, 0));
     TEST_INSTRUCTION("9BD04040", sraiw(x1, x1, 4));
     TEST_INSTRUCTION("67800000", jalr(x0, x1, 0));
     ///Load
-    TEST_INSTRUCTION("03010000", lb(x2, Mem(x1)));
-    TEST_INSTRUCTION("03110000", lh(x2, Mem(x1)));
-    TEST_INSTRUCTION("03210000", lw(x2, Mem(x1)));
-    TEST_INSTRUCTION("03410000", lbu(x2, Mem(x1)));
-    TEST_INSTRUCTION("03510000", lhu(x2, Mem(x1)));
-    TEST_INSTRUCTION("03610000", lwu(x2, Mem(x1)));
-    TEST_INSTRUCTION("03310000", ld(x2, Mem(x1)));
+    TEST_INSTRUCTION("03810000", lb(x2, Mem(x1)));
+    TEST_INSTRUCTION("03910000", lh(x2, Mem(x1)));
+    TEST_INSTRUCTION("03A10000", lw(x2, Mem(x1)));
+    TEST_INSTRUCTION("03C10000", lbu(x2, Mem(x1)));
+    TEST_INSTRUCTION("03D10000", lhu(x2, Mem(x1)));
+    TEST_INSTRUCTION("03E10000", lwu(x2, Mem(x1)));
+    TEST_INSTRUCTION("03B10000", ld(x2, Mem(x1)));
     // S-Type
-    TEST_INSTRUCTION("23001000", sb(Mem(x1), x2));
-    TEST_INSTRUCTION("23101000", sh(Mem(x1), x2));
-    TEST_INSTRUCTION("23201000", sw(Mem(x1), x2));
-    TEST_INSTRUCTION("23301000", sd(Mem(x1), x2));
+    TEST_INSTRUCTION("23802000", sb(x2, Mem(x1, 0)));
+    TEST_INSTRUCTION("A3902000", sh(x2, Mem(x1, 1)));
+    TEST_INSTRUCTION("A3AF20FE", sw(x2, Mem(x1, -1)));
+    TEST_INSTRUCTION("23B4203E", sd(x2, Mem(x1, 1000)));
     // U-Type
-    TEST_INSTRUCTION("37810C00", lui(x2, 200));
-    TEST_INSTRUCTION("97C11200", auipc(x3, 300));
+    TEST_INSTRUCTION("37F10F00", lui(x2, 0xFF));
+    TEST_INSTRUCTION("97F10F00", auipc(x3, 0xFF));
+}
+
+static void ASMJIT_NOINLINE testRISCVAssemblerRel(AssemblerTester<riscv::Assembler>& tester) noexcept {
+    using namespace riscv;
+    using namespace riscv::regs;
+    
+    // Must be a reference, because it's recreated after every `TEST_INSTRUCTION()`.
+    const Label& L0 = tester.L0;
+    // B-Type
+    TEST_INSTRUCTION("63802000", beq(x1, x2, L0));
+    TEST_INSTRUCTION("63902000", bne(x1, x2, L0));
+    TEST_INSTRUCTION("63C02000", blt(x1, x2, L0));
+    TEST_INSTRUCTION("63D02000", bge(x1, x2, L0));
+    TEST_INSTRUCTION("63E02000", bltu(x1, x2, L0));
+    TEST_INSTRUCTION("63F02000", bgeu(x1, x2, L0));
     // J-TYpe
-    //TEST_INSTRUCTION("00000113", jal(Label()));
+    TEST_INSTRUCTION("6F000000", jal(x0, L0));
 }
 
 
@@ -84,6 +99,7 @@ bool testRISCVAssembler(const TestSettings& settings) noexcept {
     tester.printHeader("RISCV");
   
     testRISCVAssemblerBase(tester);
+    testRISCVAssemblerRel(tester);
     
     tester.printSummary();
     return tester.didPass();

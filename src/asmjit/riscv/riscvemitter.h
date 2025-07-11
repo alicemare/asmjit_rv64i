@@ -68,10 +68,10 @@ struct EmitterExplicitT {
   ASMJIT_INST_2x(lwu, Lwu, Gp, Mem)
   ASMJIT_INST_2x(ld, Ld, Gp, Mem)
 
-  ASMJIT_INST_2x(sb, Sb, Mem, Gp)
-  ASMJIT_INST_2x(sh, Sh, Mem, Gp)
-  ASMJIT_INST_2x(sw, Sw, Mem, Gp)
-  ASMJIT_INST_2x(sd, Sd, Mem, Gp)
+  ASMJIT_INST_2x(sb, Sb, Gp, Mem)
+  ASMJIT_INST_2x(sh, Sh, Gp, Mem)
+  ASMJIT_INST_2x(sw, Sw, Gp, Mem)
+  ASMJIT_INST_2x(sd, Sd, Gp, Mem)
 
   ASMJIT_INST_3x(beq, Beq, Gp, Gp, Label)
   ASMJIT_INST_3x(bne, Bne, Gp, Gp, Label)
@@ -90,6 +90,9 @@ struct EmitterExplicitT {
   inline Error fence() { return _emitter()->_emitI(Inst::kIdFence); }
   // some pseudo instructions
   inline Error mov(Gp dst, Gp src) { return _emitter()->_emitI(Inst::kIdAdd, dst, src, regs::zero); }
+  // tmp workaroud 需要更多类型或者模版
+  inline Error mov(Gp dst, int imm) { return _emitter()->_emitI(Inst::kIdAddi, dst, regs::zero, Imm(imm)); }
+  inline Error mov(Gp dst, uint32_t imm) { return _emitter()->_emitI(Inst::kIdAddi, dst, regs::zero, Imm(imm)); }
   inline Error j(const Label& o0) { return _emitter()->_emitI(Inst::kIdJal, regs::zero, o0); }
   inline Error li(Gp dst, Imm imm) {
     if (imm.value() >= -2048 && imm.value() <= 2047) {
@@ -101,6 +104,12 @@ struct EmitterExplicitT {
       _emitter()->_emitI(Inst::kIdLui, dst, Imm(hi));
       return _emitter()->_emitI(Inst::kIdAuipc, dst, dst, Imm(lo));
     }
+  }
+  inline Error adr(Gp dst, Label &o0) {
+    // get label_hi = o0.addr << 12
+    // get label_lo = o0.offset
+    _emitter()->_emitI(Inst::kIdAuipc, dst, Imm(0));
+    _emitter()->_emitI(Inst::kIdAddi, dst, dst, Imm(0));
   }
 
   // ... more instructions will be added here
