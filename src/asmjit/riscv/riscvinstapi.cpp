@@ -41,33 +41,17 @@ ASMJIT_FAVOR_SIZE Error validate(const BaseInst& inst, const Operand_* operands,
 // ===============================
 
 #ifndef ASMJIT_NO_INTROSPECTION
+#define kRISCVMaxOpCount 3
+
 struct InstRWInfoData {
-  uint8_t rwx[Globals::kMaxOpCount];
+  uint8_t rwx[kRISCVMaxOpCount];
 };
 
 static const InstRWInfoData instRWInfoData[] = {
   #define R uint8_t(OpRWFlags::kRead)
   #define W uint8_t(OpRWFlags::kWrite)
   #define X uint8_t(OpRWFlags::kRW)
-
-  {{ R, R, R, R, R, R }}, // kRWI_R
-  {{ R, W, R, R, R, R }}, // kRWI_RW
-  {{ R, X, R, R, R, R }}, // kRWI_RX
-  {{ R, R, W, R, R, R }}, // kRWI_RRW
-  {{ R, W, X, R, R, R }}, // kRWI_RWX
-  {{ W, R, R, R, R, R }}, // kRWI_W
-  {{ W, R, W, R, R, R }}, // kRWI_WRW
-  {{ W, R, X, R, R, R }}, // kRWI_WRX
-  {{ W, R, R, W, R, R }}, // kRWI_WRRW
-  {{ W, R, R, X, R, R }}, // kRWI_WRRX
-  {{ W, W, R, R, R, R }}, // kRWI_WW
-  {{ X, R, R, R, R, R }}, // kRWI_X
-  {{ X, R, X, R, R, R }}, // kRWI_XRX
-  {{ X, X, R, R, X, R }}, // kRWI_XXRRX
-
-  {{ W, R, R, R, R, R }}, // kRWI_LDn
-  {{ R, W, R, R, R, R }}, // kRWI_STn
-  {{ R, R, R, R, R, R }}  // kRWI_TODO
+  {{ W, R, R }}
 
   #undef R
   #undef W
@@ -89,8 +73,7 @@ Error queryRWInfo(const BaseInst& inst, const Operand_* operands, size_t opCount
   out->_readFlags = CpuRWFlags::kNone;
   out->_writeFlags = CpuRWFlags::kNone;
 
-  const InstDB::InstInfo& instInfo = InstDB::_instInfoTable[realId];
-  const InstRWInfoData& rwInfo = instRWInfoData[instInfo.rwInfoIndex()];
+  const InstRWInfoData& rwInfo = instRWInfoData[0];
 
   for (uint32_t i = 0; i < opCount; i++) {
     OpRWInfo& op = out->_operands[i];
