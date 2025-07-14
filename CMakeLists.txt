@@ -683,8 +683,6 @@ if (NOT ASMJIT_EMBED)
     endif()
 
     foreach(_target test_assembler
-                    test_compiler2
-                    test_compiler2_a64
             )
       asmjit_add_target(${_target} TEST
                         SOURCES    test/riscv/${_target}.cpp
@@ -738,6 +736,7 @@ if (NOT ASMJIT_EMBED)
                                    test/asmjit_test_compiler.h
                                    test/asmjit_test_compiler_a64.cpp
                                    test/asmjit_test_compiler_x86.cpp
+                                   test/asmjit_test_compiler_riscv.cpp
                         LIBRARIES  asmjit::asmjit
                         CFLAGS     ${ASMJIT_PRIVATE_CFLAGS} ${ASMJIT_SSE2_CFLAGS}
                         CFLAGS_DBG ${ASMJIT_PRIVATE_CFLAGS_DBG}

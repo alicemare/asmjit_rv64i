@@ -1001,8 +1001,29 @@ public:
     #undef ASMJIT_ARM_FEATURE
   };
 
+  struct RISCV : public Data {
+    //! RISCV CPU feature identifiers.
+    enum Id : uint8_t {
+      kNone = 0,
+      kRV32I,
+      kRV64I,
+      kMaxValue,
+    };
+
+    #define ASMJIT_RISCV_FEATURE(FEATURE) \
+    /*! Tests whether FEATURE is present. */ \
+    ASMJIT_INLINE_NODEBUG bool has##FEATURE() const noexcept { return has(RISCV::k##FEATURE); }
+
+    ASMJIT_RISCV_FEATURE(RV32I)
+    ASMJIT_RISCV_FEATURE(RV64I)
+
+    #undef ASMJIT_RISCV_FEATURE
+  };
+
+
   static_assert(uint32_t(X86::kMaxValue) < kMaxFeatures, "The number of X86 CPU features cannot exceed CpuFeatures::kMaxFeatures");
   static_assert(uint32_t(ARM::kMaxValue) < kMaxFeatures, "The number of ARM CPU features cannot exceed CpuFeatures::kMaxFeatures");
+  static_assert(uint32_t(RISCV::kMaxValue) < kMaxFeatures, "The number of RISCV CPU features cannot exceed CpuFeatures::kMaxFeatures");
 
   //! \}
 
@@ -1056,6 +1077,11 @@ public:
   ASMJIT_INLINE_NODEBUG ARM& arm() noexcept { return data<ARM>(); }
   //! Returns CpuFeatures::Data as \ref CpuFeatures::ARM (const).
   ASMJIT_INLINE_NODEBUG const ARM& arm() const noexcept { return data<ARM>(); }
+
+  //! Returns CpuFeatures::Data as \ref CpuFeatures::RISCV.
+  ASMJIT_INLINE_NODEBUG RISCV& riscv() noexcept { return data<RISCV>(); }
+  //! Returns CpuFeatures::Data as \ref CpuFeatures::RISCV (const).
+  ASMJIT_INLINE_NODEBUG const RISCV& riscv() const noexcept { return data<RISCV>(); }
 
   //! Returns all features as array of bitwords (see \ref Support::BitWord).
   ASMJIT_INLINE_NODEBUG BitWord* bits() noexcept { return _data.bits(); }
