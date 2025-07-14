@@ -189,15 +189,15 @@ public:
   }
 };
 
-// riscv::Compiler - RISCVTest_Func1
-// ===========================
-class RISCVTest_Func1 : public RISCVTestCase {
+// riscv::Compiler - RISCVTest_Add
+// ================================
+class RISCVTest_Add : public RISCVTestCase {
 public:
-  RISCVTest_Func1()
-    : RISCVTestCase("Func1") {}
+  RISCVTest_Add()
+    : RISCVTestCase("Add") {}
 
   static void add(TestApp& app) {
-    app.add(new RISCVTest_Func1());
+    app.add(new RISCVTest_Add());
   }
 
   virtual void compile(riscv::Compiler& cc) {
@@ -673,7 +673,7 @@ public:
 void compiler_add_riscv_tests(TestApp& app) {
   app.addT<RISCVTest_GpArgs>();
   app.addT<RISCVTest_ManyRegs>();
-  app.addT<RISCVTest_Func1>();
+  app.addT<RISCVTest_Add>();
   app.addT<RISCVTest_Adr>();
   app.addT<RISCVTest_Branch1>();
   app.addT<RISCVTest_Invoke1>();

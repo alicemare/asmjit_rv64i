@@ -6,6 +6,7 @@
 #include "../core/api-build_p.h"
 #include "../core/support.h"
 #include "../core/codewriter_p.h"
+#include "../core/emitterutils_p.h"
 #include "../riscv/riscvassembler.h"
 #include "../riscv/riscvinstdb.h"
 #include "../riscv/riscvemithelper_p.h"
@@ -178,6 +179,13 @@ Error Assembler::_emit(InstId instId, const Operand_& o0, const Operand_& o1, co
   resetState();
 
   writer.done(this);
+
+#ifndef ASMJIT_NO_LOGGING
+  if (_logger) {
+    EmitterUtils::logInstructionEmitted(this, instId, InstOptions::kNone, o0, o1, o2, opExt, 0, 0, writer.cursor());
+  }
+#endif
+
   return err;
 }
 

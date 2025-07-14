@@ -188,6 +188,59 @@ public:
   }
 };
 
+
+// a64::Compiler - A64Test_Add
+// ================================
+class A64Test_Add : public A64TestCase {
+  public:
+  A64Test_Add()
+    : A64TestCase("Add") {}
+
+  static void add(TestApp& app) {
+    app.add(new A64Test_Add());
+  }
+
+  virtual void compile(a64::Compiler& cc) {
+    FuncNode* funcNode = cc.addFunc(FuncSignature::build<void, void*, const void*, const void*>());
+
+    a64::Gp dst = cc.newUIntPtr("dst");
+    a64::Gp src1 = cc.newUIntPtr("src1");
+    a64::Gp src2 = cc.newUIntPtr("src2");
+
+    funcNode->setArg(0, dst);
+    funcNode->setArg(1, src1);
+    funcNode->setArg(2, src2);
+
+    a64::Gp v1 = cc.newUInt32("val1");
+    a64::Gp v2 = cc.newUInt32("val2");
+    a64::Gp v3 = cc.newUInt32("val3");
+
+    cc.ldr(v1, a64::ptr(src1));
+    cc.ldr(v2, a64::ptr(src2));
+    cc.add(v3, v1, v2);
+    cc.str(v3, a64::ptr(dst));
+
+    cc.endFunc();
+  }
+
+  virtual bool run(void* _func, String& result, String& expect) {
+    using Func = void (*)(void*, const void*, const void*);
+
+    uint32_t dst;
+    uint32_t aSrc = 1;
+    uint32_t bSrc = 99;
+
+    uint32_t ref = 100;
+
+    ptr_as_func<Func>(_func)(&dst, &aSrc, &bSrc);
+
+    result.assignFormat("ret={%u}", dst);
+    expect.assignFormat("ret={%u}", ref);
+
+    return result == expect;
+  }
+};
+
 // a64::Compiler - A64Test_Simd1
 // =============================
 
@@ -675,6 +728,7 @@ public:
 void compiler_add_a64_tests(TestApp& app) {
   app.addT<A64Test_GpArgs>();
   app.addT<A64Test_ManyRegs>();
+  app.addT<A64Test_Add>();
   app.addT<A64Test_Simd1>();
   app.addT<A64Test_Adr>();
   app.addT<A64Test_Branch1>();
