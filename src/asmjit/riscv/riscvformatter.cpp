@@ -81,7 +81,20 @@ ASMJIT_FAVOR_SIZE Error FormatterInternal::formatRegister(
 #endif
 
   if (!virtRegFormatted) {
-    ASMJIT_PROPAGATE(sb.appendFormat("<Reg-%u>?%u", uint32_t(regType), rId));
+    char letter = '\0';
+    switch (regType) {
+      case RegType::kGp32:
+        letter = 'w';
+        break;
+      case RegType::kGp64:
+        letter = 'x';
+        break;
+      default:
+        ASMJIT_PROPAGATE(sb.appendFormat("<Reg-%u>?%u", uint32_t(regType), rId));
+        break;
+    }
+    if (letter)
+      ASMJIT_PROPAGATE(sb.appendFormat("%c%u", letter, rId));
   }
 
   return kErrorOk;
