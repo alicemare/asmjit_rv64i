@@ -520,6 +520,8 @@ set(ASMJIT_SRC_LIST
   asmjit/riscv/riscvinstapi.cpp
   asmjit/riscv/riscvfunc_p.h
   asmjit/riscv/riscvfunc.cpp
+  asmjit/riscv/riscvformatter_p.h
+  asmjit/riscv/riscvformatter.cpp
 
   asmjit/x86.h
   asmjit/x86/x86archtraits_p.h

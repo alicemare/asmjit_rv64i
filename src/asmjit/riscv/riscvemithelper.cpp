@@ -13,6 +13,7 @@
 #include "../core/type.h"
 #include "../riscv/riscvemithelper_p.h"
 #include "../riscv/riscvoperand.h"
+#include "../riscv/riscvformatter_p.h"
 
 ASMJIT_BEGIN_SUB_NAMESPACE(riscv)
 
@@ -143,6 +144,10 @@ void initEmitterFuncs(BaseEmitter* emitter) {
   emitter->_funcs.emitProlog = Emitter_emitProlog;
   emitter->_funcs.emitEpilog = Emitter_emitEpilog;
   emitter->_funcs.emitArgsAssignment = Emitter_emitArgsAssignment;
+#ifndef ASMJIT_NO_LOGGING
+  emitter->_funcs.formatInstruction = FormatterInternal::formatInstruction;
+#endif
+
 }
 
 ASMJIT_END_SUB_NAMESPACE

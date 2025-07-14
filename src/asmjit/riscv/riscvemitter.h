@@ -91,8 +91,7 @@ struct EmitterExplicitT {
   // some pseudo instructions
   inline Error mov(Gp dst, Gp src) { return _emitter()->_emitI(Inst::kIdAdd, dst, src, regs::zero); }
   // tmp workaroud 需要更多类型或者模版
-  inline Error mov(Gp dst, int imm) { return _emitter()->_emitI(Inst::kIdAddi, dst, regs::zero, Imm(imm)); }
-  inline Error mov(Gp dst, uint32_t imm) { return _emitter()->_emitI(Inst::kIdAddi, dst, regs::zero, Imm(imm)); }
+  inline Error mov(Gp dst, Imm imm) { return _emitter()->_emitI(Inst::kIdAddi, dst, regs::zero, imm); }
   inline Error j(const Label& o0) { return _emitter()->_emitI(Inst::kIdJal, regs::zero, o0); }
   inline Error li(Gp dst, Imm imm) {
     if (imm.value() >= -2048 && imm.value() <= 2047) {
