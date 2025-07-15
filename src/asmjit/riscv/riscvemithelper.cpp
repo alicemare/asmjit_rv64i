@@ -95,10 +95,9 @@ Error EmitHelper::emitProlog(const FuncFrame& frame) {
   if (stackAdjustment)
     emitter->addi(sp, sp, -int32_t(stackAdjustment));
 
-  if (frame.hasPreservedFP()) { // 重点排查这里的问题！
-    // TODO: [asmjit] This is a temporary fix, frame.daOffset() is not ideal.
-    emitter->sd(regs::ra, Mem(sp, int32_t(frame.daOffset())));
-    emitter->sd(fp, Mem(sp, int32_t(frame.daOffset()) + 8));
+  if (frame.hasPreservedFP()) {
+    emitter->sd(regs::ra, Mem(sp));
+    emitter->sd(fp, Mem(sp, 8));
     emitter->addi(fp, sp, int32_t(frame.finalStackSize()));
   }
 
@@ -111,12 +110,11 @@ Error EmitHelper::emitEpilog(const FuncFrame& frame) {
   const Gp& fp = regs::fp;
 
   if (frame.hasPreservedFP()) {
-    // TODO: [asmjit] This is a temporary fix, frame.daOffset() is not ideal.
-    emitter->ld(regs::ra, Mem(sp, int32_t(frame.daOffset())));
-    emitter->ld(fp, Mem(sp, int32_t(frame.daOffset()) + 8));
+    emitter->ld(regs::ra, Mem(sp));
+    emitter->ld(fp, Mem(sp, 8));
   }
 
-  uint32_t stackAdjustment = frame._stackAdjustment;
+  uint32_t stackAdjustment = frame.stackAdjustment();
   if (stackAdjustment) {
     emitter->addi(sp, sp, int32_t(stackAdjustment));
   }
