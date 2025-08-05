@@ -576,6 +576,9 @@ void RISCVRAPass::onInit() noexcept {
     makeUnavailable(RegGroup::kGp, 8); // s0/fp (x8)
   }
   
+  // Make ra (return address) unavailable
+  makeUnavailable(RegGroup::kGp, 1); // ra (x1)
+
   // Make sp unavailable
   makeUnavailable(RegGroup::kGp, 2); // sp (x2)
 
