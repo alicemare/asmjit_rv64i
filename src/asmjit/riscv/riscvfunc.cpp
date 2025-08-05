@@ -142,12 +142,7 @@ ASMJIT_FAVOR_SIZE Error initFuncDetail(FuncDetail& func, const FuncSignature& si
             // Align stack offset based on argument size
             if (size >= 8) {
               stackOffset = Support::alignUp(stackOffset, 8);
-            } else if (size >= 4) {
-              stackOffset = Support::alignUp(stackOffset, 4);
-            } else if (size >= 2) {
-              stackOffset = Support::alignUp(stackOffset, 2);
             }
-            
             arg.assignStackOffset(int32_t(stackOffset));
             stackOffset += size;
           }

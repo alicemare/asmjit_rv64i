@@ -46,7 +46,7 @@ public:
   }
 
   static void add(TestApp& app) {
-    for (uint32_t i = 9; i <= 16; i++) {
+    for (uint32_t i = 0; i <= 16; i++) {
       app.add(new RISCVTest_GpArgs(i, true));
       app.add(new RISCVTest_GpArgs(i, false));
     }

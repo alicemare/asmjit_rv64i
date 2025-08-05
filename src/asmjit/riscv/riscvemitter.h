@@ -85,6 +85,9 @@ struct EmitterExplicitT {
 
   ASMJIT_INST_2x(jal, Jal, Gp, Label)
 
+  ASMJIT_INST_2x(adr, Adr, Gp, Label)
+  ASMJIT_INST_2x(adr, Adr, Gp, Mem)
+
   inline Error jal(const Label& o0) { return _emitter()->_emitI(Inst::kIdJal, regs::ra, o0); }
   inline Error nop() { return _emitter()->_emitI(Inst::kIdNop); }
   inline Error fence() { return _emitter()->_emitI(Inst::kIdFence); }
@@ -104,13 +107,6 @@ struct EmitterExplicitT {
       return _emitter()->_emitI(Inst::kIdAuipc, dst, dst, Imm(lo));
     }
   }
-  inline Error adr(Gp dst, Label &o0) {
-    // get label_hi = o0.addr << 12
-    // get label_lo = o0.offset
-    _emitter()->_emitI(Inst::kIdAuipc, dst, Imm(0));
-    _emitter()->_emitI(Inst::kIdAddi, dst, dst, Imm(0));
-  }
-
   // ... more instructions will be added here
 };
 

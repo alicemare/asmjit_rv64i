@@ -79,7 +79,7 @@ enum Id : uint32_t {
   kIdNop,
   kIdFence,
   // ... more instructions will be added here
-
+  kIdAdr,
   kIdCount
 };
 

@@ -16,142 +16,120 @@ namespace InstDB {
 
 const InstNameIndex InstDB::instNameIndex = {
   {
-    { 0, 7 },   // 'a'
-    { 7, 13 },  // 'b'
-    { 0, 0 },   // 'c'
-    { 0, 0 },   // 'd'
-    { 0, 0 },   // 'e'
-    { 13, 14 }, // 'f'
-    { 0, 0 },   // 'g'
-    { 0, 0 },   // 'h'
-    { 0, 0 },   // 'i'
-    { 14, 16 }, // 'j'
-    { 0, 0 },   // 'k'
-    { 16, 24 }, // 'l'
-    { 0, 0 },   // 'm'
-    { 24, 25 }, // 'n'
-    { 25, 27 }, // 'o'
-    { 0, 0 },   // 'p'
-    { 0, 0 },   // 'q'
-    { 0, 0 },   // 'r'
-    { 27, 50 }, // 's'
-    { 0, 0 },   // 't'
-    { 0, 0 },   // 'u'
-    { 0, 0 },   // 'v'
-    { 0, 0 },   // 'w'
-    { 50, 52 }  // 'x'
+    { Inst::Id::kIdNone, Inst::Id::kIdCount },   // 'a'
   },
   6
 };
 
 const char InstDB::_instNameStringTable[] = {
-  "add\0"
-  "addi\0"
-  "addiw\0"
-  "addw\0"
-  "and\0"
-  "andi\0"
-  "auipc\0"
-  "beq\0"
-  "bge\0"
-  "bgeu\0"
-  "blt\0"
-  "bltu\0"
-  "bne\0"
-  "fence\0"
-  "jal\0"
-  "jalr\0"
-  "lb\0"
-  "lbu\0"
-  "ld\0"
-  "lh\0"
-  "lhu\0"
-  "lui\0"
-  "lw\0"
-  "lwu\0"
-  "nop\0"
-  "or\0"
-  "ori\0"
-  "sb\0"
-  "sd\0"
-  "sh\0"
-  "sll\0"
-  "slli\0"
-  "slliw\0"
-  "sllw\0"
-  "slt\0"
-  "slti\0"
-  "sltiu\0"
-  "sltu\0"
-  "sra\0"
-  "srai\0"
-  "sraiw\0"
-  "sraw\0"
-  "srl\0"
-  "srli\0"
-  "srliw\0"
-  "srlw\0"
-  "sub\0"
-  "subw\0"
-  "sw\0"
-  "xor\0"
-  "xori"
+  "None  "
+  "Add   "
+  "Addw  "
+  "Sub   "
+  "Subw  "
+  "Sll   "
+  "Sllw  "
+  "Srl   "
+  "Srlw  "
+  "Sra   "
+  "Sraw  "
+  "Slt   "
+  "Sltu  "
+  "And   "
+  "Or    "
+  "Xor   "
+  "Addi  "
+  "Addiw "
+  "Slti  "
+  "Sltiu "
+  "Andi  "
+  "Ori   "
+  "XOri  "
+  "Slli  "
+  "Slliw "
+  "Srli  "
+  "Srliw "
+  "Srai  "
+  "Sraiw "
+  "Jalr  "
+  "Lb    "
+  "Lh    "
+  "Lw    "
+  "Lbu   "
+  "Lhu   "
+  "Lwu   "
+  "Ld    "
+  "Sb    "
+  "Sh    "
+  "Sw    "
+  "Sd    "
+  "Beq   "
+  "Bne   "
+  "Blt   "
+  "Bge   "
+  "Bltu  "
+  "Bgeu  "
+  "Lui   "
+  "Auipc "
+  "Jal   "
+  "Nop   "
+  "Fence "
+  "Adr   "
 };
 
 const uint32_t InstDB::_instNameIndexTable[] = {
-  0, // none
-  1, // add
-  5, // sub
-  9, // sll
-  13, // slt
-  17, // sltu
-  22, // xor
-  26, // srl
-  30, // sra
-  34, // or
-  37, // and
-  41, // addw
-  46, // subw
-  51, // sllw
-  56, // srlw
-  61, // sraw
-  66, // addi
-  71, // slti
-  76, // sltiu
-  82, // xori
-  87, // ori
-  91, // andi
-  96, // slli
-  101, // srli
-  106, // srai
-  111, // addiw
-  117, // slliw
-  123, // srliw
-  129, // sraiw
-  135, // lb
-  138, // lh
-  141, // lw
-  144, // ld
-  147, // lbu
-  151, // lhu
-  155, // lwu
-  159, // sb
-  162, // sh
-  165, // sw
-  168, // sd
-  171, // beq
-  175, // bne
-  179, // blt
-  183, // bge
-  187, // bltu
-  192, // bgeu
-  197, // jal
-  201, // jalr
-  206, // lui
-  210, // auipc
-  216, // ecall
-  222, // ebreak
-  229, // fence
+  0,
+  6,
+  12,
+  18,
+  24,
+  30,
+  36,
+  42,
+  48,
+  54,
+  60,
+  66,
+  72,
+  78,
+  84,
+  90,
+  96,
+  102,
+  108,
+  114,
+  120,
+  126,
+  132,
+  138,
+  144,
+  150,
+  156,
+  162,
+  168,
+  174,
+  180,
+  186,
+  192,
+  198,
+  204,
+  210,
+  216,
+  222,
+  228,
+  234,
+  240,
+  246,
+  252,
+  258,
+  264,
+  270,
+  276,
+  282,
+  288,
+  294,
+  300,
+  306
 };
 
 #endif // !ASMJIT_NO_TEXT
@@ -198,6 +176,11 @@ static constexpr InstInfo U(uint32_t opcode, uint16_t rwInfoIndex, uint16_t flag
 // A helper to define a J-Type instruction info.
 static constexpr InstInfo J(uint32_t opcode, uint16_t rwInfoIndex, uint16_t flags = 0) noexcept {
   return InstInfo { uint32_t(EncodingType::kJ), opcode, 0, 0, 0, rwInfoIndex, static_cast<uint16_t>(flags | InstFlags::kIsJump) };
+}
+
+// A helper to pesudo Insturction info.
+static constexpr InstInfo P(uint32_t opcode, uint16_t rwInfoIndex, uint16_t flags = 0) noexcept {
+  return InstInfo { uint32_t(EncodingType::kNone), opcode, 0, rwInfoIndex, flags };
 }
 
 const InstInfo _instInfoTable[] = {
@@ -264,6 +247,7 @@ const InstInfo _instInfoTable[] = {
   // Others
   I(0b0010011, 0b000, 0b0000000, kRW_None), // kIdNop
   I(0b0001111, 0b000, 0b0000000, kRW_fence), // kIdFence
+  P(0b0000000, 0b0000000, kRW_None), // kIdAdr placeholder
 };
 // ${InstInfo:End}
 }

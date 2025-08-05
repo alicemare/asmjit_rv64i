@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: Zlib
 
 #include "../core/api-build_p.h"
+#include <cstdint>
 #if !defined(ASMJIT_NO_COMPILER)
 
 #include "../core/cpuinfo.h"
@@ -26,7 +27,12 @@ Error instIdToString(InstId instId, InstStringifyOptions options, String& output
   if (ASMJIT_UNLIKELY(!Inst::isDefinedId(realId))) {
     return DebugUtils::errored(kErrorInvalidInstruction);
   }
-
+  char nameData[6];
+  for (uint32_t i = 0 ; i < 6 ; i++) {
+    auto index = instId * 6 + i;
+    nameData[i] = InstDB::_instNameStringTable[index];
+  }
+  return output.append(nameData, sizeof(nameData));
   return InstNameUtils::decode(InstDB::_instNameIndexTable[realId], options, InstDB::_instNameStringTable, output);
 }
 

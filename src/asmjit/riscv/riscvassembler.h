@@ -9,6 +9,7 @@
 #include "../core/assembler.h"
 #include "../riscv/riscvemitter.h"
 #include "../riscv/riscvoperand.h"
+#include "riscvinstdb.h"
 
 ASMJIT_BEGIN_SUB_NAMESPACE(riscv)
 

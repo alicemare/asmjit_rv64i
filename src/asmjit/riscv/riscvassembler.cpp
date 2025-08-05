@@ -29,6 +29,75 @@ Assembler::~Assembler() noexcept {}
 // =======================
 
 Error Assembler::_emit(InstId instId, const Operand_& o0, const Operand_& o1, const Operand_& o2, const Operand_* opExt) {
+  if (instId == riscv::Inst::kIdAdr) {
+    const Gp& rd = o0.as<Gp>();
+    
+    if (o1.isLabel()) {
+      const Label& label = o1.as<Label>();
+      uint32_t labelId = label.id();
+      
+      if (ASMJIT_UNLIKELY(!_code->isLabelValid(labelId))) {
+        return DebugUtils::errored(kErrorInvalidLabel);
+      }
+      
+      LabelEntry& le = _code->labelEntry(labelId);
+      CodeWriter writer(this);
+      ASMJIT_PROPAGATE(writer.ensureSpace(this, 8));
+      
+      if (le.isBoundTo(_section)) {
+        // 标签已绑定，直接计算
+        uint64_t currentPC = offset();
+        uint64_t targetOffset = le.offset();
+        int64_t displacement = int64_t(targetOffset - currentPC);
+        
+        // 生成 AUIPC + ADDI 序列
+        uint32_t hi20 = (displacement + 0x800) >> 12;
+        int32_t lo12 = displacement & 0xFFF;
+        if (lo12 > 2047) lo12 -= 4096;
+        
+        // AUIPC rd, hi20
+        uint32_t auipcOpcode = 0b0010111 | (rd.id() << 7) | ((hi20 & 0xFFFFF) << 12);
+        writer.emit32uLE(auipcOpcode);
+        
+        // ADDI rd, rd, lo12 (如果需要)
+        if (lo12 != 0) {
+          uint32_t addiOpcode = 0b0010011 | (rd.id() << 7) | (rd.id() << 15) | ((lo12 & 0xFFF) << 20);
+          writer.emit32uLE(addiOpcode);
+        }
+      } else {
+        // 标签未绑定，使用标准的有符号偏移 fixup
+        size_t codeOffset = writer.offsetFrom(_bufferData);
+        
+        // 使用标准的有符号偏移格式，避免自定义类型引起的问题
+        OffsetFormat offsetFormat;
+        offsetFormat.resetToSimpleValue(OffsetType::kSignedOffset, 4); // 4字节单指令
+        
+        Fixup* fixup = _code->newFixup(le, _section->sectionId(), codeOffset, 0, offsetFormat);
+        if (ASMJIT_UNLIKELY(!fixup)) {
+          return DebugUtils::errored(kErrorOutOfMemory);
+        }
+        
+        // 临时方案：先发射一条简单的 AUIPC 指令作为占位符
+        uint32_t auipcOpcode = 0b0010111 | (rd.id() << 7); // AUIPC rd, 0
+        writer.emit32uLE(auipcOpcode);
+      }
+      
+      resetState();
+      writer.done(this);
+      
+#ifndef ASMJIT_NO_LOGGING
+      if (_logger) {
+        EmitterUtils::logInstructionEmitted(this, instId, InstOptions::kNone, o0, o1, o2, opExt, 0, 0, writer.cursor());
+      }
+#endif
+      
+      return kErrorOk;
+    }
+    
+    // 处理其他类型的操作数...
+    return DebugUtils::errored(kErrorInvalidInstruction);
+  }
+
   const InstDB::InstInfo& info = InstDB::infoById(instId);
   uint32_t opcode = 0;
   CodeWriter writer(this);

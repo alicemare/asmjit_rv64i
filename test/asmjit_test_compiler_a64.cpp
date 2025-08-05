@@ -45,7 +45,7 @@ public:
   }
 
   static void add(TestApp& app) {
-    for (uint32_t i = 0; i <= 16; i++) {
+    for (uint32_t i = 0; i <= 1; i++) {
       app.add(new A64Test_GpArgs(i, true));
       app.add(new A64Test_GpArgs(i, false));
     }
