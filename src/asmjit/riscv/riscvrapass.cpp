@@ -578,7 +578,10 @@ void RISCVRAPass::onInit() noexcept {
   
   // Make sp unavailable
   makeUnavailable(RegGroup::kGp, 2); // sp (x2)
-  
+
+  // Make gp (global pointer) unavailable
+  makeUnavailable(RegGroup::kGp, 3); // gp (x3)
+
   // Make tp (thread pointer) unavailable
   makeUnavailable(RegGroup::kGp, 4); // tp (x4)
   
