@@ -100,45 +100,6 @@ ASMJIT_FAVOR_SIZE Error FormatterInternal::formatRegister(
   return kErrorOk;
 }
 
-ASMJIT_FAVOR_SIZE Error FormatterInternal::formatRegisterList(
-  String& sb,
-  FormatFlags flags,
-  const BaseEmitter* emitter,
-  Arch arch,
-  RegType regType,
-  uint32_t rMask) noexcept {
-
-  bool first = true;
-
-  ASMJIT_PROPAGATE(sb.append('{'));
-  while (rMask != 0u) {
-    uint32_t start = Support::ctz(rMask);
-    uint32_t count = 0u;
-
-    uint32_t mask = 1u << start;
-    do {
-      rMask &= ~mask;
-      mask <<= 1u;
-      count++;
-    } while (rMask & mask);
-
-    if (!first) {
-      ASMJIT_PROPAGATE(sb.append(", "));
-    }
-
-    ASMJIT_PROPAGATE(formatRegister(sb, flags, emitter, arch, regType, start, 0, 0xFFFFFFFFu));
-    if (count >= 2u) {
-      ASMJIT_PROPAGATE(sb.append('-'));
-      ASMJIT_PROPAGATE(formatRegister(sb, flags, emitter, arch, regType, start + count - 1, 0, 0xFFFFFFFFu));
-    }
-
-    first = false;
-  }
-  ASMJIT_PROPAGATE(sb.append('}'));
-
-  return kErrorOk;
-}
-
 // riscv::FormatterInternal - Format Operand
 // =============================================
 
@@ -161,56 +122,26 @@ ASMJIT_FAVOR_SIZE Error FormatterInternal::formatOperand(
 
   if (op.isMem()) {
     const riscv::Mem& m = op.as<riscv::Mem>();
+    // RISC-V格式：offset(base)
+    int64_t off = m.hasOffset() ? int64_t(m.offset()) : 0;
+    uint32_t base = 10;
+
+    if (Support::test(flags, FormatFlags::kHexOffsets) && uint64_t(off) > 9) {
+      base = 16;
+      ASMJIT_PROPAGATE(sb.append("0x"));
+      ASMJIT_PROPAGATE(sb.appendUInt(uint64_t(off), base));
+    } else {
+      ASMJIT_PROPAGATE(sb.appendInt(off, base));
+    }
 
     if (m.hasBase()) {
+      ASMJIT_PROPAGATE(sb.append("("));
       if (m.hasBaseLabel()) {
         ASMJIT_PROPAGATE(Formatter::formatLabel(sb, flags, emitter, m.baseId()));
-      }
-      else {
-        // 寄存器基址
-        FormatFlags modifiedFlags = flags;
-        if (m.isRegHome()) {
-          ASMJIT_PROPAGATE(sb.append('&'));
-          modifiedFlags &= ~FormatFlags::kRegCasts;
-        }
-        ASMJIT_PROPAGATE(formatRegister(sb, modifiedFlags, emitter, arch, m.baseType(), m.baseId()));
-      }
-    }
-    else {
-      // RISC-V 允许纯偏移（如 `lw x10, symbol`），但通常需要 `%hi`/`%lo` 辅助
-      if (m.hasOffset()) {
-        ASMJIT_PROPAGATE(sb.append("<None>"));
-      }
-    }
-
-    // 处理偏移量（RISCV 格式化为 `offset(base)`）
-    if (m.hasOffset()) {
-      int64_t off = int64_t(m.offset());
-      uint32_t base = 10;
-
-      if (Support::test(flags, FormatFlags::kHexOffsets) && uint64_t(off) > 9) {
-        base = 16;
-      }
-
-      // 如果是寄存器基址，输出为 `offset(base)` 形式
-      if (m.hasBase() && !m.hasBaseLabel()) {
-        ASMJIT_PROPAGATE(sb.append("("));
-        if (base == 10) {
-          ASMJIT_PROPAGATE(sb.appendInt(off, base));
-        } else {
-          ASMJIT_PROPAGATE(sb.append("0x"));
-          ASMJIT_PROPAGATE(sb.appendUInt(uint64_t(off), base));
-        }
-        ASMJIT_PROPAGATE(sb.append(")"));
       } else {
-        // 纯偏移（如标签地址）
-        if (base == 10) {
-          ASMJIT_PROPAGATE(sb.appendInt(off, base));
-        } else {
-          ASMJIT_PROPAGATE(sb.append("0x"));
-          ASMJIT_PROPAGATE(sb.appendUInt(uint64_t(off), base));
-        }
+        ASMJIT_PROPAGATE(formatRegister(sb, flags, emitter, arch, m.baseType(), m.baseId()));
       }
+      ASMJIT_PROPAGATE(sb.append(")"));
     }
     return kErrorOk;
   }
@@ -218,7 +149,6 @@ ASMJIT_FAVOR_SIZE Error FormatterInternal::formatOperand(
   if (op.isImm()) {
     const Imm& i = op.as<Imm>();
     int64_t val = i.value();
-    // uint32_t predicate = i.predicate(); // todo，RV 没有predict 寄存器
 
     if (Support::test(flags, FormatFlags::kHexImms) && uint64_t(val) > 9) {
       ASMJIT_PROPAGATE(sb.append("0x"));
@@ -234,8 +164,7 @@ ASMJIT_FAVOR_SIZE Error FormatterInternal::formatOperand(
   }
 
   if (op.isRegList()) {
-    const BaseRegList& regList = op.as<BaseRegList>();
-    return formatRegisterList(sb, flags, emitter, arch, regList.regType(), regList.list());
+    return sb.append("RISCV has Reg Lists????");
   }
 
   return sb.append("<None>");
