@@ -81,16 +81,15 @@ Error Assembler::_emit(InstId instId, const Operand_& o0, const Operand_& o1, co
         uint32_t auipcOpcode = 0b0010111 | (rd.id() << 7); // AUIPC rd, 0
         writer.emit32uLE(auipcOpcode);
       }
-      
+
+#ifndef ASMJIT_NO_LOGGING
+        if (_logger) {
+          EmitterUtils::logInstructionEmitted(this, instId, InstOptions::kReserved, o0, o1, o2, opExt, 0, 0, writer.cursor());
+        }
+#endif
       resetState();
       writer.done(this);
-      
-#ifndef ASMJIT_NO_LOGGING
-      if (_logger) {
-        EmitterUtils::logInstructionEmitted(this, instId, InstOptions::kNone, o0, o1, o2, opExt, 0, 0, writer.cursor());
-      }
-#endif
-      
+            
       return kErrorOk;
     }
     
@@ -245,15 +244,13 @@ Error Assembler::_emit(InstId instId, const Operand_& o0, const Operand_& o1, co
   }
   writer.emit32uLE(opcode);
 
-  resetState();
-
-  writer.done(this);
-
 #ifndef ASMJIT_NO_LOGGING
   if (_logger) {
-    EmitterUtils::logInstructionEmitted(this, instId, InstOptions::kNone, o0, o1, o2, opExt, 0, 0, writer.cursor());
+    EmitterUtils::logInstructionEmitted(this, instId, InstOptions::kReserved, o0, o1, o2, opExt, 0, 0, writer.cursor());
   }
 #endif
+  resetState();
+  writer.done(this);
 
   return err;
 }
