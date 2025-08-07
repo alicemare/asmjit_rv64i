@@ -90,15 +90,20 @@ Error EmitHelper::emitProlog(const FuncFrame& frame) {
   Emitter* emitter = _emitter->as<Emitter>();
   const Gp& sp = regs::sp;
   const Gp& fp = regs::fp;
+  const Gp& ra = regs::ra;
+  int32_t offset = 0;
 
   uint32_t stackAdjustment = frame._stackAdjustment;
-  if (stackAdjustment)
+  if (stackAdjustment) {
     emitter->addi(sp, sp, -int32_t(stackAdjustment));
+    emitter->sd(ra, Mem(sp, offset));
+    offset += 8;
+  }
 
   if (frame.hasPreservedFP()) {
-    emitter->sd(regs::ra, Mem(sp));
-    emitter->sd(fp, Mem(sp, 8));
-    emitter->addi(fp, sp, int32_t(frame.finalStackSize()));
+    emitter->sd(fp, Mem(sp, offset));
+    offset += 8;
+    // emitter->addi(fp, sp, int32_t(frame.finalStackSize()));
   }
 
   return kErrorOk;
@@ -108,18 +113,22 @@ Error EmitHelper::emitEpilog(const FuncFrame& frame) {
   Emitter* emitter = _emitter->as<Emitter>();
   const Gp& sp = regs::sp;
   const Gp& fp = regs::fp;
+  const Gp& ra = regs::ra;
+  int32_t offset = 0;
 
   if (frame.hasPreservedFP()) {
-    emitter->ld(regs::ra, Mem(sp));
-    emitter->ld(fp, Mem(sp, 8));
+    emitter->ld(fp, Mem(sp, offset));
+    offset += 8;
   }
 
   uint32_t stackAdjustment = frame.stackAdjustment();
   if (stackAdjustment) {
+    emitter->ld(ra, Mem(sp, offset));
+    offset += 8;
     emitter->addi(sp, sp, int32_t(stackAdjustment));
   }
 
-  emitter->jalr(regs::zero, regs::ra, 0);
+  emitter->jalr(ra, ra, 0); //ret
   return kErrorOk;
 }
 
