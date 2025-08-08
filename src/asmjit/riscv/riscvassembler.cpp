@@ -137,7 +137,7 @@ Error Assembler::_emit(InstId instId, const Operand_& o0, const Operand_& o1, co
       } else {
         rd_id = o0.as<Gp>().id();
         rs1_id = o1.as<Gp>().id();
-        imm12 = (o2.as<Imm>().value() & 0xff) | (info.funct7() << 5);
+        imm12 = (o2.as<Imm>().value() & 0xfff) | (info.funct7() << 5);
       }
 
       //if (!Support::isSigned<12>(immValue))
