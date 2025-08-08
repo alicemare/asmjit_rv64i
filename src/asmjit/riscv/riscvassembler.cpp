@@ -122,17 +122,20 @@ Error Assembler::_emit(InstId instId, const Operand_& o0, const Operand_& o1, co
     case InstDB::EncodingType::kI: {
       // [immediate[11:0] | rs1 | funct3 | rd | opcode]
       // [shtyp[11:5]] | imm[4:0] | rs1 | func3 | rd | opcode] 
-      const Gp& rd = o0.as<Gp>();
-      uint32_t rs1_id;
-      uint32_t imm12;
-
+      uint32_t rd_id, rs1_id, imm12;
       if (info.hasFlag(InstDB::kIsLoad)) {
+        rd_id = o0.as<Gp>().id();
         const Mem& mem = o1.as<Mem>();
         if (!mem.hasBaseReg())
           return DebugUtils::errored(kErrorInvalidInstruction);
         rs1_id = mem.baseId();
         imm12 = uint32_t(mem.offset());
+      } else if (instId == Inst::kIdJalr) {
+        rd_id = regs::ra.id();
+        rs1_id = o0.as<Gp>().id();
+        imm12 = 0;
       } else {
+        rd_id = o0.as<Gp>().id();
         rs1_id = o1.as<Gp>().id();
         imm12 = (o2.as<Imm>().value() & 0xff) | (info.funct7() << 5);
       }
@@ -141,7 +144,7 @@ Error Assembler::_emit(InstId instId, const Operand_& o0, const Operand_& o1, co
       //  return DebugUtils::errored(kErrorInvalidImmediate);
 
       opcode = info.opcode() |
-               (uint32_t(rd.id()) << 7) |
+               (rd_id << 7) |
                (info.funct3() << 12) |
                (rs1_id << 15) |
                (imm12 << 20);
