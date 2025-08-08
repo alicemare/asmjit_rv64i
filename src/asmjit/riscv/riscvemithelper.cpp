@@ -114,17 +114,20 @@ Error EmitHelper::emitEpilog(const FuncFrame& frame) {
   const Gp& sp = regs::sp;
   const Gp& fp = regs::fp;
   const Gp& ra = regs::ra;
+  
+  uint32_t stackAdjustment = frame.stackAdjustment();
   int32_t offset = 0;
 
+  if (stackAdjustment) {
+    emitter->ld(ra, Mem(sp, offset));
+    offset += 8;
+  }
   if (frame.hasPreservedFP()) {
     emitter->ld(fp, Mem(sp, offset));
     offset += 8;
   }
 
-  uint32_t stackAdjustment = frame.stackAdjustment();
   if (stackAdjustment) {
-    emitter->ld(ra, Mem(sp, offset));
-    offset += 8;
     emitter->addi(sp, sp, int32_t(stackAdjustment));
   }
 
