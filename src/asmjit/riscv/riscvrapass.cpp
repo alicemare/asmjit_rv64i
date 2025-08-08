@@ -268,73 +268,61 @@ Error RACFGBuilder::onBeforeInvoke(InvokeNode* invokeNode) noexcept {
 
   cc()->_setCursor(invokeNode->prev());
 
+  // (valueIndex = 0)
   for (uint32_t argIndex = 0; argIndex < argCount; argIndex++) {
-    const FuncValuePack& argPack = fd.argPack(argIndex);
-    for (uint32_t valueIndex = 0; valueIndex < Globals::kMaxValuePack; valueIndex++) {
-      if (!argPack[valueIndex])
-        break;
+    const FuncValue& arg = fd.arg(argIndex, 0);  // 直接使用第一个值
+    const Operand& op = invokeNode->arg(argIndex, 0);
 
-      const FuncValue& arg = argPack[valueIndex];
-      const Operand& op = invokeNode->arg(argIndex, valueIndex);
+    if (op.isNone()) {
+      continue;
+    }
 
-      if (op.isNone())
-        continue;
+    if (op.isReg()) {
+      const Reg& reg = op.as<Reg>();
+      RAWorkReg* workReg;
+      ASMJIT_PROPAGATE(_pass->virtIndexAsWorkReg(Operand::virtIdToIndex(reg.id()), &workReg));
 
-      if (op.isReg()) {
-        const Reg& reg = op.as<Reg>();
-        RAWorkReg* workReg;
-        ASMJIT_PROPAGATE(_pass->virtIndexAsWorkReg(Operand::virtIdToIndex(reg.id()), &workReg));
+      if (arg.isReg()) {
+        RegGroup regGroup = workReg->group();
+        RegGroup argGroup = RegUtils::groupOf(arg.regType());
 
-        if (arg.isReg()) {
-          RegGroup regGroup = workReg->group();
-          RegGroup argGroup = RegUtils::groupOf(arg.regType());
-
-          if (regGroup != argGroup) {
-            // TODO: [RISC-V] Conversion is not supported.
-            return DebugUtils::errored(kErrorInvalidAssignment);
-          }
-        }
-        else {
-          ASMJIT_PROPAGATE(moveRegToStackArg(invokeNode, arg, reg));
+        if (regGroup != argGroup) {
+          return DebugUtils::errored(kErrorInvalidAssignment);
         }
       }
-      else if (op.isImm()) {
-        if (arg.isReg()) {
-          Reg reg;
-          ASMJIT_PROPAGATE(moveImmToRegArg(invokeNode, arg, op.as<Imm>(), &reg));
-          invokeNode->_args[argIndex][valueIndex] = reg;
-        }
-        else {
-          ASMJIT_PROPAGATE(moveImmToStackArg(invokeNode, arg, op.as<Imm>()));
-        }
+      else {
+        ASMJIT_PROPAGATE(moveRegToStackArg(invokeNode, arg, reg));
+      }
+    }
+    else if (op.isImm()) {
+      if (arg.isReg()) {
+        Reg reg;
+        ASMJIT_PROPAGATE(moveImmToRegArg(invokeNode, arg, op.as<Imm>(), &reg));
+        invokeNode->_args[argIndex][0] = reg;  // 只设置第一个值
+      }
+      else {
+        ASMJIT_PROPAGATE(moveImmToStackArg(invokeNode, arg, op.as<Imm>()));
       }
     }
   }
 
   cc()->_setCursor(invokeNode);
 
+  // valueIndex = 0
   if (fd.hasRet()) {
-    for (uint32_t valueIndex = 0; valueIndex < Globals::kMaxValuePack; valueIndex++) {
-      const FuncValue& ret = fd.ret(valueIndex);
-      if (!ret) {
-        break;
-      }
+    const FuncValue& ret = fd.ret(0);  // 只处理第一个返回值
+    const Operand& op = invokeNode->ret(0);
+    
+    if (op.isReg() && ret.isReg()) {
+      const Reg& reg = op.as<Reg>();
+      RAWorkReg* workReg;
+      ASMJIT_PROPAGATE(_pass->virtIndexAsWorkReg(Operand::virtIdToIndex(reg.id()), &workReg));
 
-      const Operand& op = invokeNode->ret(valueIndex);
-      if (op.isReg()) {
-        const Reg& reg = op.as<Reg>();
-        RAWorkReg* workReg;
-        ASMJIT_PROPAGATE(_pass->virtIndexAsWorkReg(Operand::virtIdToIndex(reg.id()), &workReg));
+      RegGroup regGroup = workReg->group();
+      RegGroup retGroup = RegUtils::groupOf(ret.regType());
 
-        if (ret.isReg()) {
-          RegGroup regGroup = workReg->group();
-          RegGroup retGroup = RegUtils::groupOf(ret.regType());
-
-          if (regGroup != retGroup) {
-            // TODO: [RISC-V] Conversion is not supported.
-            return DebugUtils::errored(kErrorInvalidAssignment);
-          }
-        }
+      if (regGroup != retGroup) {
+        return DebugUtils::errored(kErrorInvalidAssignment);
       }
     }
   }
@@ -351,66 +339,53 @@ Error RACFGBuilder::onInvoke(InvokeNode* invokeNode, RAInstBuilder& ib) noexcept
   uint32_t argCount = invokeNode->argCount();
   const FuncDetail& fd = invokeNode->detail();
 
+  // valueIndex = 1
   for (uint32_t argIndex = 0; argIndex < argCount; argIndex++) {
-    const FuncValuePack& argPack = fd.argPack(argIndex);
-    for (uint32_t valueIndex = 0; valueIndex < Globals::kMaxValuePack; valueIndex++) {
-      if (!argPack[valueIndex]) {
-        continue;
-      }
+    const FuncValue& arg = fd.arg(argIndex, 0);
+    const Operand& op = invokeNode->arg(argIndex, 0);
 
-      const FuncValue& arg = argPack[valueIndex];
-      const Operand& op = invokeNode->arg(argIndex, valueIndex);
-
-      if (op.isNone()) {
-        continue;
-      }
-
-      if (op.isReg()) {
-        const Reg& reg = op.as<Reg>();
-        RAWorkReg* workReg;
-        ASMJIT_PROPAGATE(_pass->virtIndexAsWorkReg(Operand::virtIdToIndex(reg.id()), &workReg));
-
-        if (arg.isIndirect()) {
-          RegGroup regGroup = workReg->group();
-          if (regGroup != RegGroup::kGp) {
-            return DebugUtils::errored(kErrorInvalidState);
-          }
-          ASMJIT_PROPAGATE(ib.addCallArg(workReg, arg.regId()));
-        }
-        else if (arg.isReg()) {
-          RegGroup regGroup = workReg->group();
-          RegGroup argGroup = RegUtils::groupOf(arg.regType());
-
-          if (regGroup == argGroup) {
-            ASMJIT_PROPAGATE(ib.addCallArg(workReg, arg.regId()));
-          }
-        }
-      }
-    }
-  }
-
-  for (uint32_t retIndex = 0; retIndex < Globals::kMaxValuePack; retIndex++) {
-    const FuncValue& ret = fd.ret(retIndex);
-    if (!ret) {
-      break;
+    if (op.isNone() || !arg.isInitialized()) {
+      continue;
     }
 
-    const Operand& op = invokeNode->ret(retIndex);
     if (op.isReg()) {
       const Reg& reg = op.as<Reg>();
       RAWorkReg* workReg;
       ASMJIT_PROPAGATE(_pass->virtIndexAsWorkReg(Operand::virtIdToIndex(reg.id()), &workReg));
 
-      if (ret.isReg()) {
+      if (arg.isIndirect()) {
         RegGroup regGroup = workReg->group();
-        RegGroup retGroup = RegUtils::groupOf(ret.regType());
+        if (regGroup != RegGroup::kGp) {
+          return DebugUtils::errored(kErrorInvalidState);
+        }
+        ASMJIT_PROPAGATE(ib.addCallArg(workReg, arg.regId()));
+      }
+      else if (arg.isReg()) {
+        RegGroup regGroup = workReg->group();
+        RegGroup argGroup = RegUtils::groupOf(arg.regType());
 
-        if (regGroup == retGroup) {
-          ASMJIT_PROPAGATE(ib.addCallRet(workReg, ret.regId()));
+        if (regGroup == argGroup) {
+          ASMJIT_PROPAGATE(ib.addCallArg(workReg, arg.regId()));
         }
       }
-      else {
-        return DebugUtils::errored(kErrorInvalidAssignment);
+    }
+  }
+
+  // valueIndex = 1
+  if (fd.hasRet()) {
+    const FuncValue& ret = fd.ret(0);
+    const Operand& op = invokeNode->ret(0);
+    
+    if (op.isReg() && ret.isReg()) {
+      const Reg& reg = op.as<Reg>();
+      RAWorkReg* workReg;
+      ASMJIT_PROPAGATE(_pass->virtIndexAsWorkReg(Operand::virtIdToIndex(reg.id()), &workReg));
+
+      RegGroup regGroup = workReg->group();
+      RegGroup retGroup = RegUtils::groupOf(ret.regType());
+
+      if (regGroup == retGroup) {
+        ASMJIT_PROPAGATE(ib.addCallRet(workReg, ret.regId()));
       }
     }
   }
