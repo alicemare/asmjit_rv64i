@@ -94,18 +94,62 @@ struct EmitterExplicitT {
   // some pseudo instructions
   inline Error mov(Gp dst, Gp src) { return _emitter()->_emitI(Inst::kIdAdd, dst, src, regs::zero); }
   // tmp workaroud 需要更多类型或者模版
-  inline Error mov(Gp dst, Imm imm) { return _emitter()->_emitI(Inst::kIdAddi, dst, regs::zero, imm); }
+  inline Error mov(Gp dst, Imm imm) { return li(dst, imm); }
   inline Error j(const Label& o0) { return _emitter()->_emitI(Inst::kIdJal, regs::zero, o0); }
   inline Error li(Gp dst, Imm imm) {
-    if (imm.value() >= -2048 && imm.value() <= 2047) {
-      return _emitter()->_emitI(Inst::kIdAddi, dst, regs::zero, imm);
-    } else { // 对于大立即数，需要 lui+addi
-      uint64_t value = static_cast<uint64_t>(imm.value());
-      uint32_t hi = static_cast<uint32_t>((value + 0x800) >> 12) & 0xFFFFF;
-      int32_t lo = static_cast<int32_t>(value & 0xFFF);
-      _emitter()->_emitI(Inst::kIdLui, dst, Imm(hi));
-      return _emitter()->_emitI(Inst::kIdAuipc, dst, dst, Imm(lo));
+    int64_t value = imm.value();
+    if (value >= -2048 && value <= 2047) {
+        return _emitter()->_emitI(Inst::kIdAddi, dst, regs::zero, imm);
     }
+    else if (value >= INT32_MIN && value <= INT32_MAX) {
+        // 32位常量：LUI + ADDI
+        uint32_t hi20 = (value + 0x800) >> 12;
+        int32_t lo12 = value & 0xFFF;
+        if (lo12 > 2047) lo12 -= 4096;
+        _emitter()->_emitI(Inst::kIdLui, dst, Imm(hi20));
+        if (lo12 != 0) {
+            return _emitter()->_emitI(Inst::kIdAddi, dst, dst, Imm(lo12));
+        }
+        return kErrorOk;
+    }
+    else {
+        // 64位常量：放入常量池，然后用AUIPC + LD加载
+        // 这需要Compiler支持，暂时用多指令序列
+        return loadImmediate64(dst, value);
+    }
+  }
+  Error loadImmediate64(const Gp& dst, uint64_t value) {
+    // 方案A：多步移位加载（6-8条指令）
+    if ((value & 0xFFFFFFFF00000000ULL) == 0) {
+        // 32位值
+        return mov(dst, Imm(int32_t(value)));
+    }
+    // 真正的64位值：分块加载
+    // 从高位开始，每次12位
+    uint32_t parts[6];
+    parts[5] = (value >> 60) & 0xF;    // 最高4位
+    parts[4] = (value >> 48) & 0xFFF;  // 59:48
+    parts[3] = (value >> 36) & 0xFFF;  // 47:36
+    parts[2] = (value >> 24) & 0xFFF;  // 35:24
+    parts[1] = (value >> 12) & 0xFFF;  // 23:12
+    parts[0] = value & 0xFFF;          // 11:0
+    // 找到最高非零部分
+    int start = 5;
+    while (start >= 0 && parts[start] == 0) start--;
+    if (start < 0) {
+        // 值为0
+        return _emitter()->_emitI(Inst::kIdAddi, dst, regs::zero, Imm(0));
+    }
+    // 加载最高部分
+    _emitter()->_emitI(Inst::kIdAddi, dst, regs::zero, Imm(parts[start]));
+    // 依次加载其他部分
+    for (int i = start - 1; i >= 0; i--) {
+        _emitter()->_emitI(Inst::kIdSlli, dst, dst, Imm(12));
+        if (parts[i] != 0) {
+            _emitter()->_emitI(Inst::kIdOri, dst, dst, Imm(parts[i]));
+        }
+    }
+    return kErrorOk;
   }
   // ... more instructions will be added here
 };
