@@ -181,9 +181,20 @@ Error Assembler::_emit(InstId instId, const Operand_& o0, const Operand_& o1, co
       // [immediate[12|10:5] | rs2 | rs1 | funct3 | immediate[4:1|11] | opcode]
       const Gp& rs1 = o0.as<Gp>();
       const Gp& rs2 = o1.as<Gp>();
-      const Label& lab = o2.as<Label>(); // todo, Label to Offset
-      int64_t offset = lab.id();
+      const Label& lab = o2.as<Label>();
+      auto labelId = lab.id();
 
+      LabelEntry& le = _code->labelEntry(labelId);
+      if (le.isBoundTo(_section)) {
+        // Label 已绑定到当前 section，直接计算偏移量
+        uint64_t currentPC = offset();
+        uint64_t targetOffset = le.offset();
+        int64_t offset = int64_t(targetOffset - currentPC);
+
+       // 检查偏移量是否有效（必须是2字节对齐，且在13位有符号数范围内）
+        if ((offset & 1) != 0 || offset < -4096 || offset > 4095 ) {
+          return DebugUtils::errored(kErrorInvalidDisplacement);
+        }
       //if ((offset & 1) != 0 || !Support::isSigned<13>(offset))
       //  return DebugUtils::errored(kErrorInvalidDisplacement);
 
@@ -201,6 +212,33 @@ Error Assembler::_emit(InstId instId, const Operand_& o0, const Operand_& o1, co
                (imm10_5 << 25) |
                (imm12 << 31);
       break;
+      } else {
+        // using Fixup
+        // Label 未绑定，创建 fixup 进行延迟解析
+        size_t codeOffset = writer.offsetFrom(_bufferData);
+        // 定义 RISC-V Branch 指令的偏移格式
+        OffsetFormat offsetFormat;
+        offsetFormat.resetToImmValue(
+          OffsetType::kSignedOffset,  // 有符号偏移
+          4,                          // 指令大小为4字节
+          0,                          // 无额外位移
+          13,                         // 13位立即数
+          1                           // 丢弃LSB（2字节对齐）
+        );
+
+        // 创建 fixup
+        Fixup* fixup = _code->newFixup(le, _section->sectionId(), codeOffset, 0, offsetFormat);
+        if (ASMJIT_UNLIKELY(!fixup)) {
+          return DebugUtils::errored(kErrorOutOfMemory);
+        }
+
+        // 发射占位符指令（立即数字段为0）
+        opcode = info.opcode() |
+                (info.funct3() << 12) |
+                (uint32_t(rs1.id()) << 15) |
+                (uint32_t(rs2.id()) << 20);
+        // 立即数字段保持为0，等待 fixup 时回填
+      }
     }
 
     case InstDB::EncodingType::kU: {

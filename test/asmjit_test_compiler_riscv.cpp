@@ -470,7 +470,10 @@ public:
 
     funcNode->setArg(0, x);
     funcNode->setArg(1, y);
-    cc.mov(fn, (uint64_t)calledFunc);
+    printf("calledFunc address: %p\n", (void*)calledFunc);
+    riscv::Mem funcPtr = cc.newConst(ConstPoolScope::kLocal, (void*)calledFunc, 8);
+    cc.ld(fn, funcPtr);
+    //cc.mov(fn, (uint64_t)calledFunc);
 
     InvokeNode* invokeNode;
     cc.invoke(&invokeNode, fn, FuncSignature::build<int64_t, int64_t, int64_t>());
