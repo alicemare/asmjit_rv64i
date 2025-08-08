@@ -137,13 +137,9 @@ public:
   //! \note At the moment this instruction is only useful to load a stack allocated address into a GP register
   //! for further use. It makes very little sense to use it for anything else. The semantics of this instruction
   //! is the same as X86 `LEA` (load effective address) instruction.
-  ASMJIT_INLINE_NODEBUG Error loadAddressOf(const Gp& o0, const Mem& o1) { 
-    return _emitter()->_emitI(Inst::kIdAdr, o0, o1); 
-  }
+  ASMJIT_INLINE_NODEBUG Error loadAddressOf(const Gp& o0, const Mem& o1);
 
-  ASMJIT_INLINE_NODEBUG Error loadAddressOf(const Gp& o0, const Label& o1) { 
-    return _emitter()->_emitI(Inst::kIdAdr, o0, o1); 
-  }
+  ASMJIT_INLINE_NODEBUG Error loadAddressOf(const Gp& o0, const Label& o1);
 
   //! \}
 

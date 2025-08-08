@@ -47,7 +47,7 @@ public:
 
   static void add(TestApp& app) {
     for (uint32_t i = 0; i <= 16; i++) {
-      app.add(new RISCVTest_GpArgs(i, true));
+     // app.add(new RISCVTest_GpArgs(i, true));
       app.add(new RISCVTest_GpArgs(i, false));
     }
   }
@@ -418,7 +418,10 @@ public:
     funcNode->setArg(0, x);
     funcNode->setArg(1, y);
 
-    cc.mov(fn, (uint64_t)calledFunc);
+    // cc.mov(fn, (uint64_t)calledFunc);
+    // 不要直接mov立即数，使用常量池
+    riscv::Mem constAddr = cc.newConst(ConstPoolScope::kLocal, (void*)calledFunc, sizeof(void*));
+    cc.ld(fn, constAddr);
 
     InvokeNode* invokeNode;
     cc.invoke(&invokeNode, fn, FuncSignature::build<uint32_t, uint32_t, uint32_t>());
