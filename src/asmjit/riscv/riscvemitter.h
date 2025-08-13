@@ -88,7 +88,7 @@ struct EmitterExplicitT {
   ASMJIT_INST_2x(adr, Adr, Gp, Label)
   ASMJIT_INST_2x(adr, Adr, Gp, Mem)
 
-  inline Error jal(const Label& o0) { return _emitter()->_emitI(Inst::kIdJal, regs::ra, o0); }
+//  inline Error ret() { return _emitter()->_emitI(Inst::kIdJalr, regs::x0, regs::ra, Imm(0)); }
   inline Error nop() { return _emitter()->_emitI(Inst::kIdNop); }
   inline Error fence() { return _emitter()->_emitI(Inst::kIdFence); }
   // some pseudo instructions
@@ -97,59 +97,87 @@ struct EmitterExplicitT {
   inline Error mov(Gp dst, Imm imm) { return li(dst, imm); }
   inline Error j(const Label& o0) { return _emitter()->_emitI(Inst::kIdJal, regs::zero, o0); }
   inline Error li(Gp dst, Imm imm) {
-    int64_t value = imm.value();
-    if (value >= -2048 && value <= 2047) {
-        return _emitter()->_emitI(Inst::kIdAddi, dst, regs::zero, imm);
+    uint32_t lo32 = imm.uint32Lo();
+    uint32_t hi32 = imm.uint32Hi();
+    uint64_t val = ((uint64_t)hi32 << 32) | lo32;
+    const auto& zr = regs::x0;
+    Error err = kErrorOk;
+
+    if (val == 0) {
+        return _emitter()->_emitI(Inst::kIdAdd, dst, zr, zr);
     }
-    else if (value >= INT32_MIN && value <= INT32_MAX) {
-        // 32位常量：LUI + ADDI
-        uint32_t hi20 = (value + 0x800) >> 12;
-        int32_t lo12 = value & 0xFFF;
-        if (lo12 > 2047) lo12 -= 4096;
-        _emitter()->_emitI(Inst::kIdLui, dst, Imm(hi20));
-        if (lo12 != 0) {
-            return _emitter()->_emitI(Inst::kIdAddi, dst, dst, Imm(lo12));
-        }
-        return kErrorOk;
+
+    if ((int64_t)val >= -2048 && (int64_t)val < 2048) {
+        return _emitter()->_emitI(Inst::kIdAddi, dst, zr, Imm(val));
     }
-    else {
-        // 64位常量：放入常量池，然后用AUIPC + LD加载
-        // 这需要Compiler支持，暂时用多指令序列
-        return loadImmediate64(dst, value);
+
+    if ((int64_t)val == (int32_t)val) {
+        int32_t sval = (int32_t)val;
+        
+        // lui + addiw 组合
+        int32_t hi20 = (sval + 0x800) >> 12;  // addiw need sign-extend
+        int32_t lo12 = sval & 0xFFF;
+        
+        ASMJIT_PROPAGATE(_emitter()->_emitI(Inst::kIdLui, dst, Imm(hi20)));
+        return _emitter()->_emitI(Inst::kIdAddiw, dst, dst, Imm(lo12));
     }
-  }
-  Error loadImmediate64(const Gp& dst, uint64_t value) {
-    // 方案A：多步移位加载（6-8条指令）
-    if ((value & 0xFFFFFFFF00000000ULL) == 0) {
-        // 32位值
-        return mov(dst, Imm(int32_t(value)));
+
+    // 情况3：完整64位数
+    // 策略：使用最多8条指令，每次加载12位并移位
+
+    // 将64位数看作 5.33 个12位段
+    // 从高位到低位依次构建
+
+    // 最简单的实现：分6次，每次处理11位（除了最后一次处理9位）
+    // 总共 64 = 11*5 + 9 位
+
+    bool first = true;
+
+    // 处理 bit[63:53] (11 bits)
+    uint64_t chunk = (val >> 53) & 0x7FF;
+    if (chunk != 0 || first) {
+      ASMJIT_PROPAGATE(_emitter()->_emitI(Inst::kIdAddi, dst, zr, Imm(chunk)));
+      first = false;
     }
-    // 真正的64位值：分块加载
-    // 从高位开始，每次12位
-    uint32_t parts[6];
-    parts[5] = (value >> 60) & 0xF;    // 最高4位
-    parts[4] = (value >> 48) & 0xFFF;  // 59:48
-    parts[3] = (value >> 36) & 0xFFF;  // 47:36
-    parts[2] = (value >> 24) & 0xFFF;  // 35:24
-    parts[1] = (value >> 12) & 0xFFF;  // 23:12
-    parts[0] = value & 0xFFF;          // 11:0
-    // 找到最高非零部分
-    int start = 5;
-    while (start >= 0 && parts[start] == 0) start--;
-    if (start < 0) {
-        // 值为0
-        return _emitter()->_emitI(Inst::kIdAddi, dst, regs::zero, Imm(0));
+
+    // 处理 bit[52:42] (11 bits)
+    chunk = (val >> 42) & 0x7FF;
+    if (!first) ASMJIT_PROPAGATE(_emitter()->_emitI(Inst::kIdSlli, dst, dst, Imm(11)));
+    if (chunk != 0 || first) {
+      ASMJIT_PROPAGATE(_emitter()->_emitI(Inst::kIdAddi, dst, first ? zr : dst, Imm(chunk)));
+      first = false;
     }
-    // 加载最高部分
-    _emitter()->_emitI(Inst::kIdAddi, dst, regs::zero, Imm(parts[start]));
-    // 依次加载其他部分
-    for (int i = start - 1; i >= 0; i--) {
-        _emitter()->_emitI(Inst::kIdSlli, dst, dst, Imm(12));
-        if (parts[i] != 0) {
-            _emitter()->_emitI(Inst::kIdOri, dst, dst, Imm(parts[i]));
-        }
+
+    // 处理 bit[41:31] (11 bits)
+    chunk = (val >> 31) & 0x7FF;
+    if (!first) ASMJIT_PROPAGATE(_emitter()->_emitI(Inst::kIdSlli, dst, dst, Imm(11)));
+    if (chunk != 0 || first) {
+      ASMJIT_PROPAGATE(_emitter()->_emitI(Inst::kIdAddi, dst, first ? zr : dst, Imm(chunk)));
+      first = false;
     }
-    return kErrorOk;
+
+    // 处理 bit[30:20] (11 bits)
+    chunk = (val >> 20) & 0x7FF;
+    if (!first) ASMJIT_PROPAGATE(_emitter()->_emitI(Inst::kIdSlli, dst, dst, Imm(11)));
+    if (chunk != 0 || first) {
+      ASMJIT_PROPAGATE(_emitter()->_emitI(Inst::kIdAddi, dst, first ? zr : dst, Imm(chunk)));
+      first = false;
+    }
+
+    // 处理 bit[19:9] (11 bits)
+    chunk = (val >> 9) & 0x7FF;
+    if (!first) ASMJIT_PROPAGATE(_emitter()->_emitI(Inst::kIdSlli, dst, dst, Imm(11)));
+    if (chunk != 0 || first) {
+      ASMJIT_PROPAGATE(_emitter()->_emitI(Inst::kIdAddi, dst, first ? zr : dst, Imm(chunk)));
+      first = false;
+    }
+
+    // 处理 bit[8:0] (9 bits)
+    chunk = val & 0x1FF;
+    if (!first) ASMJIT_PROPAGATE(_emitter()->_emitI(Inst::kIdSlli, dst, dst, Imm(9)));
+    ASMJIT_PROPAGATE(_emitter()->_emitI(Inst::kIdAddi, dst, first ? zr : dst, Imm(chunk)));
+
+    return err;
   }
   // ... more instructions will be added here
 };

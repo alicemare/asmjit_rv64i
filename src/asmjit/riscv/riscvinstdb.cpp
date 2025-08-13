@@ -220,13 +220,13 @@ const InstInfo _instInfoTable[] = {
   I(0b0011011, 0b101, 0b0100000, kRW_r_r_imm), // kIdSraiw
   I(0b1100111, 0b000, 0b0000000, kRW_r_r_imm), // kIdJalr
   // Load
-  I(0b0000011, 0b000, 0b0000000, kRW_r_mem), // kIdLb
-  I(0b0000011, 0b001, 0b0000000, kRW_r_mem), // kIdLh
-  I(0b0000011, 0b010, 0b0000000, kRW_r_mem), // kIdLw
-  I(0b0000011, 0b100, 0b0000000, kRW_r_mem), // kIdLbu
-  I(0b0000011, 0b101, 0b0000000, kRW_r_mem), // kIdLhu
-  I(0b0000011, 0b110, 0b0000000, kRW_r_mem), // kIdLwu
-  I(0b0000011, 0b011, 0b0000000, kRW_r_mem), // kIdLd
+  I(0b0000011, 0b000, 0b0000000, kRW_r_mem, kIsLoad), // kIdLb
+  I(0b0000011, 0b001, 0b0000000, kRW_r_mem, kIsLoad), // kIdLh
+  I(0b0000011, 0b010, 0b0000000, kRW_r_mem, kIsLoad), // kIdLw
+  I(0b0000011, 0b100, 0b0000000, kRW_r_mem, kIsLoad), // kIdLbu
+  I(0b0000011, 0b101, 0b0000000, kRW_r_mem, kIsLoad), // kIdLhu
+  I(0b0000011, 0b110, 0b0000000, kRW_r_mem, kIsLoad), // kIdLwu
+  I(0b0000011, 0b011, 0b0000000, kRW_r_mem, kIsLoad), // kIdLd
   // S-Type
   S(0b0100011, 0b000, kRW_mem_r), // kIdSb
   S(0b0100011, 0b001, kRW_mem_r), // kIdSh

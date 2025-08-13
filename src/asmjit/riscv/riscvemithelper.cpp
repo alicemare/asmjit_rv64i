@@ -81,9 +81,55 @@ Error EmitHelper::emitRegSwap(const Reg& a, const Reg& b, const char* comment) {
   return DebugUtils::errored(kErrorInvalidState);
 }
 
-Error EmitHelper::emitArgMove(const Reg& dst_, TypeId dstTypeId, const Operand_& src_, TypeId srcTypeId, const char* comment) {
-  // TODO:
-  return kErrorOk;
+Error EmitHelper::emitArgMove(
+  const Reg& dst_, TypeId dstTypeId,
+  const Operand_& src_, TypeId srcTypeId, const char* comment) {
+
+  // Deduce optional `dstTypeId`, which may be `TypeId::kVoid` in some cases.
+  if (dstTypeId == TypeId::kVoid) {
+    dstTypeId = RegUtils::typeIdOf(dst_.regType());
+  }
+
+  // Invalid or abstract TypeIds are not allowed.
+  ASMJIT_ASSERT(TypeUtils::isValid(dstTypeId) && !TypeUtils::isAbstract(dstTypeId));
+  ASMJIT_ASSERT(TypeUtils::isValid(srcTypeId) && !TypeUtils::isAbstract(srcTypeId));
+
+  Reg dst(dst_.as<Reg>());
+  Operand src(src_);
+
+  uint32_t dstSize = TypeUtils::sizeOf(dstTypeId);
+
+  if (TypeUtils::isInt(dstTypeId)) {
+    if (TypeUtils::isInt(srcTypeId)) {
+      uint32_t x = uint32_t(dstSize == 8);
+
+      dst.setSignature(OperandSignature{x ? RegTraits<RegType::kGp64>::kSignature : RegTraits<RegType::kGp32>::kSignature});
+      _emitter->setInlineComment(comment);
+
+      if (src.isReg()) {
+        src.setSignature(dst.signature());
+        return _emitter->emit(Inst::kIdAdd, dst, src, regs::x0);
+      }
+      else if (src.isMem()) {
+        InstId instId = Inst::kIdNone;
+          switch (srcTypeId) {
+          case TypeId::kInt8: instId = Inst::kIdLb; break;
+          case TypeId::kUInt8: instId = Inst::kIdLbu; break;
+          case TypeId::kInt16: instId = Inst::kIdLh; break;
+          case TypeId::kUInt16: instId = Inst::kIdLhu; break;
+          case TypeId::kInt32: instId = Inst::kIdLw; break;
+          case TypeId::kUInt32: instId = Inst::kIdLwu; break;
+          case TypeId::kInt64: instId = Inst::kIdLd; break;
+          case TypeId::kUInt64: instId = Inst::kIdLd; break;
+          default:
+            return DebugUtils::errored(kErrorInvalidState);
+        }
+        return _emitter->emit(instId, dst, src);
+      }
+    }
+  }
+
+  return DebugUtils::errored(kErrorInvalidState);
 }
 
 Error EmitHelper::emitProlog(const FuncFrame& frame) {
@@ -131,7 +177,7 @@ Error EmitHelper::emitEpilog(const FuncFrame& frame) {
     emitter->addi(sp, sp, int32_t(stackAdjustment));
   }
 
-  emitter->jalr(ra, ra, 0); //ret
+  emitter->jalr(regs::x0, ra, 0);
   return kErrorOk;
 }
 

@@ -130,10 +130,6 @@ Error Assembler::_emit(InstId instId, const Operand_& o0, const Operand_& o1, co
           return DebugUtils::errored(kErrorInvalidInstruction);
         rs1_id = mem.baseId();
         imm12 = uint32_t(mem.offset());
-      } else if (instId == Inst::kIdJalr) {
-        rd_id = regs::ra.id();
-        rs1_id = o0.as<Gp>().id();
-        imm12 = 0;
       } else {
         rd_id = o0.as<Gp>().id();
         rs1_id = o1.as<Gp>().id();

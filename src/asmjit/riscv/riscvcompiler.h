@@ -158,7 +158,6 @@ public:
 
   ASMJIT_INLINE_NODEBUG Error ret() { return addRet(Operand(), Operand()); }
   ASMJIT_INLINE_NODEBUG Error ret(const Reg& o0) { return addRet(o0, Operand()); }
-  ASMJIT_INLINE_NODEBUG Error ret(const Reg& o0, const Reg& o1) { return addRet(o0, o1); }
 
   //! \}
 

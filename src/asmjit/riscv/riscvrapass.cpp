@@ -336,7 +336,16 @@ Error RACFGBuilder::onBeforeInvoke(InvokeNode* invokeNode) noexcept {
 }
 
 Error RACFGBuilder::onInvoke(InvokeNode* invokeNode, RAInstBuilder& ib) noexcept {
-  uint32_t argCount = invokeNode->argCount();
+  printf("InvokeNode opCount: %u\n", invokeNode->opCount());
+  for (uint32_t i = 0; i < invokeNode->opCount(); i++) {
+    printf("  op[%u]: type=%u\n", i, invokeNode->op(i).opType());
+  }
+  // hack
+  auto target = invokeNode->op(0);
+  invokeNode->setOp(0, regs::ra);
+  invokeNode->setOp(1, target);
+
+  uint32_t argCount = invokeNode->argCount(); // func arg num
   const FuncDetail& fd = invokeNode->detail();
 
   // valueIndex = 1
@@ -390,8 +399,6 @@ Error RACFGBuilder::onInvoke(InvokeNode* invokeNode, RAInstBuilder& ib) noexcept
     }
   }
 
-  // Setup clobbered registers.
-  // In RISC-V calling convention, registers t0-t6 (x5-x7, x28-x31) and a0-a7 (x10-x17) are caller-saved.
   ib._clobbered[0] = Support::lsbMask<RegMask>(_pass->_physRegCount[RegGroup(0)]) & ~fd.preservedRegs(RegGroup(0));
   ib._clobbered[1] = Support::lsbMask<RegMask>(_pass->_physRegCount[RegGroup(1)]) & ~fd.preservedRegs(RegGroup(1));
   ib._clobbered[2] = Support::lsbMask<RegMask>(_pass->_physRegCount[RegGroup(2)]) & ~fd.preservedRegs(RegGroup(2));
@@ -546,10 +553,8 @@ void RISCVRAPass::onInit() noexcept {
   // x0 is hardwired to zero, always unavailable
   makeUnavailable(RegGroup::kGp, 0);
 
-  if (hasFP) {
-    // If we have a frame pointer, make it unavailable
-    makeUnavailable(RegGroup::kGp, 8); // s0/fp (x8)
-  }
+  // If we have a frame pointer, make it unavailable
+  makeUnavailable(RegGroup::kGp, 8); // s0/fp (x8)
   
   // Make ra (return address) unavailable
   makeUnavailable(RegGroup::kGp, 1); // ra (x1)
@@ -675,6 +680,12 @@ ASMJIT_FAVOR_SPEED Error RISCVRAPass::_rewrite(BaseNode* first, BaseNode* stop) 
       // Handle RISC-V specific instructions
       // RISC-V doesn't have a direct equivalent to ARM's `adr` instruction
       // So we don't need the special handling for address loading
+      if (inst->realId() == Inst::kIdJalr && inst->opCount() == 1 && inst->op(0).isReg()) {
+        // hack func call
+        auto target = inst->op(0).as<Reg>(); // phy reg id
+        inst->operands()[0] = regs::ra;
+        inst->operands()[1] = target;
+      }
     }
 
     node = next;
