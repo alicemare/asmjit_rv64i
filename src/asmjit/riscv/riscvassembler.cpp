@@ -177,27 +177,27 @@ Error Assembler::_emit(InstId instId, const Operand_& o0, const Operand_& o1, co
       // [immediate[12|10:5] | rs2 | rs1 | funct3 | immediate[4:1|11] | opcode]
       const Gp& rs1 = o0.as<Gp>();
       const Gp& rs2 = o1.as<Gp>();
-      const Label& lab = o2.as<Label>();
-      auto labelId = lab.id();
-
-      LabelEntry& le = _code->labelEntry(labelId);
+      const Label& label = o2.as<Label>();
+      LabelEntry& le = _code->labelEntry(label.id());
+      uint64_t offsetValue = 0;
       if (le.isBoundTo(_section)) {
-        // Label 已绑定到当前 section，直接计算偏移量
-        uint64_t currentPC = offset();
-        uint64_t targetOffset = le.offset();
-        int64_t offset = int64_t(targetOffset - currentPC);
+        // target - currentPc
+        offsetValue = le.offset() - uint64_t(offset());
+      } else {
+        printf("Create a fixup referencing an non-bound label\n");
+        // [[TODO]]
+        size_t codeOffset = writer.offsetFrom(_bufferData);
+        // RISCV B-Type OffsetFormat sign(imm[12:1]] << 1)
+        OffsetFormat offsetFormat;
+        offsetFormat.resetToImmValue(OffsetType::kRISCV64_BType, 4, 0, 13, 1);
+        
+        Fixup* fixup = _code->newFixup(le, _section->sectionId(), codeOffset, 0, offsetFormat);
+      }
 
-       // 检查偏移量是否有效（必须是2字节对齐，且在13位有符号数范围内）
-        if ((offset & 1) != 0 || offset < -4096 || offset > 4095 ) {
-          return DebugUtils::errored(kErrorInvalidDisplacement);
-        }
-      //if ((offset & 1) != 0 || !Support::isSigned<13>(offset))
-      //  return DebugUtils::errored(kErrorInvalidDisplacement);
-
-      uint32_t imm11   = (offset >> 11) & 1;
-      uint32_t imm4_1  = (offset >> 1) & 0xF;
-      uint32_t imm10_5 = (offset >> 5) & 0x3F;
-      uint32_t imm12   = (offset >> 12) & 1;
+      uint32_t imm11   = (offsetValue >> 11) & 1;
+      uint32_t imm4_1  = (offsetValue >> 1) & 0xF;
+      uint32_t imm10_5 = (offsetValue >> 5) & 0x3F;
+      uint32_t imm12   = (offsetValue >> 12) & 1;
 
       opcode = info.opcode() |
                (imm11 << 7) |
@@ -208,33 +208,6 @@ Error Assembler::_emit(InstId instId, const Operand_& o0, const Operand_& o1, co
                (imm10_5 << 25) |
                (imm12 << 31);
       break;
-      } else {
-        // using Fixup
-        // Label 未绑定，创建 fixup 进行延迟解析
-        size_t codeOffset = writer.offsetFrom(_bufferData);
-        // 定义 RISC-V Branch 指令的偏移格式
-        OffsetFormat offsetFormat;
-        offsetFormat.resetToImmValue(
-          OffsetType::kSignedOffset,  // 有符号偏移
-          4,                          // 指令大小为4字节
-          0,                          // 无额外位移
-          13,                         // 13位立即数
-          1                           // 丢弃LSB（2字节对齐）
-        );
-
-        // 创建 fixup
-        Fixup* fixup = _code->newFixup(le, _section->sectionId(), codeOffset, 0, offsetFormat);
-        if (ASMJIT_UNLIKELY(!fixup)) {
-          return DebugUtils::errored(kErrorOutOfMemory);
-        }
-
-        // 发射占位符指令（立即数字段为0）
-        opcode = info.opcode() |
-                (info.funct3() << 12) |
-                (uint32_t(rs1.id()) << 15) |
-                (uint32_t(rs2.id()) << 20);
-        // 立即数字段保持为0，等待 fixup 时回填
-      }
     }
 
     case InstDB::EncodingType::kU: {

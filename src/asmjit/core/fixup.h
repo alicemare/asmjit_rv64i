@@ -105,10 +105,10 @@ enum class OffsetType : uint8_t {
   kAArch32_1To24At0_0At24,
 
   //! RISCV ADR
-  kRISCV64_ADR,
+  kRISCV64_BType,
 
   //! Maximum value of `OffsetFormatType`.
-  kMaxValue = kRISCV64_ADR
+  kMaxValue = kRISCV64_BType
 };
 
 //! Provides information about formatting offsets, absolute addresses, or their parts. Offset format is used by both
