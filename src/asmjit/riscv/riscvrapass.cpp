@@ -113,8 +113,7 @@ static InstControlFlow getControlFlowType(InstId instId) noexcept {
       return InstControlFlow::kCall;
 
     case Inst::kIdJalr:
-      // todo，需要根据目标寄存器来判断，如果目标是ra则是调用，如果是零寄存器则是跳转
-      return InstControlFlow::kReturn;
+      return InstControlFlow::kCall;
     case Inst::kIdBeq:
     case Inst::kIdBne:
     case Inst::kIdBlt:
