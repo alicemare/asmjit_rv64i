@@ -555,6 +555,36 @@ public:
   }
 };
 
+class RISCVTest_Const : public RISCVTestCase {
+public:
+  RISCVTest_Const()
+    : RISCVTestCase("LoadConst") {}
+
+  static void add(TestApp& app) {
+    app.add(new RISCVTest_Const());
+  }
+
+  virtual void compile(riscv::Compiler& cc) {
+    cc.addFunc(FuncSignature::build<int64_t>());
+
+    riscv::Gp val = cc.newInt64("val");
+    int64_t value = 0x1234567890;
+    cc.loadImm(val, value);
+    cc.ret(val);
+    cc.endFunc();
+  }
+
+  virtual bool run(void* _func, String& result, String& expect) {
+    using Func = int64_t (*)(void);
+    Func func = ptr_as_func<Func>(_func);
+
+    result.assignFormat("ret={%ld}", func());
+    expect.assignFormat("ret={%ld}", 0x1234567890);
+
+    return result == expect;
+  }
+};
+
 // riscv::Compiler - RISCVTest_JumpTable
 // =================================
 /*
@@ -674,14 +704,15 @@ public:
 // ======================
 
 void compiler_add_riscv_tests(TestApp& app) {
-  //app.addT<RISCVTest_GpArgs>();
-  //app.addT<RISCVTest_ManyRegs>();
+  app.addT<RISCVTest_GpArgs>();
+  app.addT<RISCVTest_ManyRegs>();
   app.addT<RISCVTest_Add>();
   //app.addT<RISCVTest_Adr>();
   app.addT<RISCVTest_Branch1>();
   app.addT<RISCVTest_Invoke1>();
   app.addT<RISCVTest_Invoke2>();
   app.addT<RISCVTest_Invoke3>();
+  app.addT<RISCVTest_Const>();
   //app.addT<RISCVTest_JumpTable>();
 }
 

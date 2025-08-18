@@ -126,10 +126,41 @@ Error Assembler::_emit(InstId instId, const Operand_& o0, const Operand_& o1, co
       if (info.hasFlag(InstDB::kIsLoad)) {
         rd_id = o0.as<Gp>().id();
         const Mem& mem = o1.as<Mem>();
-        if (!mem.hasBaseReg())
-          return DebugUtils::errored(kErrorInvalidInstruction);
-        rs1_id = mem.baseId();
-        imm12 = uint32_t(mem.offset());
+        printf("LabelId: %d, BaseReg: %d, Offset: %ld\n", mem.baseId(), mem.baseReg().id(), mem.offset());
+        if (!mem.hasBaseReg()) {
+          // This pattern is a memory operand that is a pure label reference,
+          // without any base register. This signifies a constant pool load.
+          // genearte 2 instructions: auipc dst, hi20 + ld dst, lo12(dst)
+          LabelEntry le = _code->labelEntry(mem.baseId());
+          // AUIPC
+          size_t auipcOffset = writer.offsetFrom(_bufferData);
+          OffsetFormat auipcFormat;
+          auipcFormat.resetToImmValue(OffsetType::kRISCV64_U_Hi20, 4, 12, 20, 0);
+
+          // create fixup for auipc
+          RelocEntry* auipc_re;
+          err = _code->newRelocEntry(&auipc_re, RelocType::kAbsToRel);
+          auipc_re->_sourceSectionId = _section->sectionId();
+          auipc_re->_sourceOffset = auipcOffset;
+          auipc_re->_format = auipcFormat;
+          writer.emit32uLE(info.opcode() | (uint32_t(rd_id) << 7) | (uint32_t(0) << 12));
+          err = writer.ensureSpace(this, 4);
+
+          // LD
+          size_t ldOffset = writer.offsetFrom(_bufferData);
+          OffsetFormat ldFormat;
+          ldFormat.resetToImmValue(OffsetType::kRISCV64_I_Lo12, 4, 0, 12, 0);
+
+          // create fixup for ld
+          RelocEntry* ld_re;
+          err = _code->newRelocEntry(&ld_re, RelocType::kAbsToRel);
+          ld_re->_sourceSectionId = _section->sectionId();
+          ld_re->_sourceOffset = ldOffset;
+          ld_re->_format = ldFormat;
+        } else {
+          rs1_id = mem.baseId();
+          imm12 = uint32_t(mem.offset());
+        }
       } else {
         rd_id = o0.as<Gp>().id();
         rs1_id = o1.as<Gp>().id();

@@ -104,7 +104,13 @@ enum class OffsetType : uint8_t {
   //! in a 32-bit word.
   kAArch32_1To24At0_0At24,
 
-  //! RISCV ADR
+  //! RISCV Load
+  kRISCV64_I_Lo12,
+
+  //! RISCV Auipc + Lui
+  kRISCV64_U_Hi20,
+
+  //! RISCV Branch
   kRISCV64_BType,
 
   //! Maximum value of `OffsetFormatType`.

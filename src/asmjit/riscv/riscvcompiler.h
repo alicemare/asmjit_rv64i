@@ -165,6 +165,11 @@ public:
     }
   }
 
+  Error loadImm(const Gp& dst, int64_t val) {
+    Mem constAddr = newConst(ConstPoolScope::kGlobal, &val, sizeof(val));
+    return ld(dst, constAddr);
+  }
+
   //! \}
 
   //! \name Function Call & Ret Intrinsics

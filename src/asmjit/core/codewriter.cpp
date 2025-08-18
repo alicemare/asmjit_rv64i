@@ -7,6 +7,7 @@
 #include "../core/codeholder.h"
 #include "../core/codewriter_p.h"
 #include "../arm/armutils.h"
+#include <cstdio>
 
 ASMJIT_BEGIN_NAMESPACE
 
@@ -200,7 +201,7 @@ bool CodeWriterUtils::encodeOffset32(uint32_t* dst, int64_t offset64, const Offs
       if (offset64 < -4096 || offset64 > 4095) {
         return false;
       }
-      printf("Offset64: %ld\n", offset64);
+      printf("RISCV-B Type Offset64: %ld\n", offset64);
       uint32_t imm = static_cast<uint32_t>(offset64) & 0x1FFE;
       uint32_t imm_12 = (imm >> 12) & 1;
       uint32_t imm_11 = (imm >> 11) & 1;
@@ -213,6 +214,62 @@ bool CodeWriterUtils::encodeOffset32(uint32_t* dst, int64_t offset64, const Offs
       *dst |= (imm_4_1 << 8);    // imm[4:1]
       *dst |= (imm_11 << 7);     // imm[11]
       
+      return true;
+    }
+
+    // I-Type 指令重定位
+    case OffsetType::kRISCV64_I_Lo12: {
+      // 参数检查: 值大小为4字节, 12位立即数, 无位移
+      if (format.valueSize() != 4 || bitCount != 12 || bitShift != 0) {
+          return false;
+      }
+
+      // 检查偏移量是否在12位有符号范围内 [-2048, 2047]
+      if (offset64 < -2048 || offset64 > 2047) {
+          return false;
+      }
+
+      printf("RISCV-I Type Offset64: %ld\n", offset64);
+
+      // 提取低12位 (包括符号位)
+      uint32_t imm = static_cast<uint32_t>(offset64) & 0xFFF;
+
+      // 清除目标指令中的立即数字段 (位[31:20])
+      *dst &= 0x000FFFFF;
+
+      // 将立即数写入指令的 [31:20] 位置
+      *dst |= (imm << 20);
+
+      return true;
+    }
+
+    // U-Type 指令重定位 (e.g., auipc, lui)
+    case OffsetType::kRISCV64_U_Hi20: {
+      // 参数检查: 值大小为4字节, 20位立即数, 无位移
+      if (format.valueSize() != 4 || bitCount != 20 || bitShift != 0) {
+          return false;
+      }
+
+      // 检查偏移量是否在32位有符号范围内 [-0x80000000, 0x7FFFFFFF]
+      if (offset64 < static_cast<int64_t>(0xFFFFFFFF80000000) ||
+          offset64 > 0x7FFFFFFF) {
+          return false;
+      }
+
+      printf("RISCV-U Type Offset64: %ld\n", offset64);
+
+      // 将偏移量转为32位表示 (保留二进制补码)
+      uint32_t offset32 = static_cast<uint32_t>(offset64);
+
+      // 提取高20位 (偏移量的 [31:12])
+      uint32_t imm = (offset32 >> 12) & 0xFFFFF;
+
+      // 清除目标指令中的立即数字段 (位[31:12])
+      *dst &= 0x00000FFF;
+
+      // 将立即数写入指令的 [31:12] 位置
+      *dst |= (imm << 12);
+
       return true;
     }
     default:
