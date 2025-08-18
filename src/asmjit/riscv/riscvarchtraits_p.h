@@ -38,7 +38,7 @@ static const constexpr ArchTraits riscvArchTraits = {
 
   // Instruction hints [Gp, Vec, Mask, Extra].
   {{
-    InstHints::kNoHints,    // No Push/Pop Hnit
+    InstHints::kPushPop,    // No Push/Pop Hnit
     InstHints::kNoHints,    // No Vec Hint
     InstHints::kNoHints,    // No Mask Hint
     InstHints::kNoHints     // No Extra Hint

@@ -133,51 +133,113 @@ Error EmitHelper::emitArgMove(
 }
 
 Error EmitHelper::emitProlog(const FuncFrame& frame) {
-  Emitter* emitter = _emitter->as<Emitter>();
-  const Gp& sp = regs::sp;
-  const Gp& fp = regs::fp;
-  const Gp& ra = regs::ra;
-  int32_t offset = 0;
+  printf("=== PROLOG DEBUG ===\n");
+  printf("stackAdjustment: %u\n", frame.stackAdjustment());
+  printf("finalStackSize: %u\n", frame.finalStackSize());
+  printf("pushPopSaveOffset: %u\n", frame.pushPopSaveOffset());
+  printf("pushPopSaveSize: %u\n", frame.pushPopSaveSize());
+  printf("localStackOffset: %u\n", frame.localStackOffset());
+  printf("savedRegs mask: 0x%x\n", frame.savedRegs(RegGroup::kGp));
 
-  uint32_t stackAdjustment = frame._stackAdjustment;
-  if (stackAdjustment) {
-    emitter->addi(sp, sp, -int32_t(stackAdjustment));
+  using namespace regs;
+  Emitter* emitter = _emitter->as<Emitter>();
+  uint32_t stackSize = frame.finalStackSize();
+  if (stackSize == 0) {
+    return kErrorOk;
+  }
+
+  // Alloc stack space
+  emitter->addi(sp, sp, -int32_t(stackSize));
+
+  RegMask savedGpMask = frame.savedRegs(RegGroup::kGp);
+  // offset is SP-relative
+  int32_t offset = int32_t(frame.pushPopSaveOffset());
+
+  // 1. 保存 ra (x1)
+  if (savedGpMask & Support::bitMask(1)) {
     emitter->sd(ra, Mem(sp, offset));
     offset += 8;
   }
 
-  if (frame.hasPreservedFP()) {
+  // 2. 保存 fp/s0 (x8)
+  if (savedGpMask & Support::bitMask(8)) {
     emitter->sd(fp, Mem(sp, offset));
     offset += 8;
-    // emitter->addi(fp, sp, int32_t(frame.finalStackSize()));
+  }
+
+  // 3. 保存 s1 (x9)
+  if (savedGpMask & Support::bitMask(9)) {
+    emitter->sd(x9, Mem(sp, offset));
+    offset += 8;
+  }
+
+  // 4. 保存 s2-s11 (x18-x27)
+  for (uint32_t regId = 18; regId <= 27; regId++) {
+    if (savedGpMask & Support::bitMask(regId)) {
+      Gp reg = Gp::make_x(regId);
+      emitter->sd(reg, Mem(sp, offset));
+      offset += 8;
+    }
+  }
+
+  // 如果使用帧指针，设置它
+  if (frame.hasPreservedFP()) {
+    emitter->addi(fp, sp, int32_t(stackSize));
   }
 
   return kErrorOk;
 }
 
 Error EmitHelper::emitEpilog(const FuncFrame& frame) {
+  printf("=== PROLOG DEBUG ===\n");
+  printf("stackAdjustment: %u\n", frame.stackAdjustment());
+  printf("finalStackSize: %u\n", frame.finalStackSize());
+  printf("pushPopSaveOffset: %u\n", frame.pushPopSaveOffset());
+  printf("pushPopSaveSize: %u\n", frame.pushPopSaveSize());
+  printf("localStackOffset: %u\n", frame.localStackOffset());
+  printf("savedRegs mask: 0x%x\n", frame.savedRegs(RegGroup::kGp));
+
+  using namespace regs;
   Emitter* emitter = _emitter->as<Emitter>();
-  const Gp& sp = regs::sp;
-  const Gp& fp = regs::fp;
-  const Gp& ra = regs::ra;
-  
-  uint32_t stackAdjustment = frame.stackAdjustment();
-  int32_t offset = 0;
+  uint32_t stackSize = frame.finalStackSize();
+  if (stackSize == 0) {
+    emitter->jalr(x0, ra, 0); // ret
+    return kErrorOk;
+  }
 
-  if (stackAdjustment) {
-    emitter->ld(ra, Mem(sp, offset));
+  RegMask savedGpMask = frame.savedRegs(RegGroup::kGp);
+  // Use extraRegSaveOffset for restoration
+  int32_t offset = int32_t(frame.pushPopSaveOffset());
+
+  // 1. 恢复 ra (x1)
+  if (savedGpMask & Support::bitMask(1)) {
+    emitter->ld(regs::ra, Mem(sp, offset));
     offset += 8;
   }
-  if (frame.hasPreservedFP()) {
-    emitter->ld(fp, Mem(sp, offset));
+
+  // 2. 恢复 fp/s0 (x8)
+  if (savedGpMask & Support::bitMask(8)) {
+    emitter->ld(regs::fp, Mem(sp, offset));
     offset += 8;
   }
 
-  if (stackAdjustment) {
-    emitter->addi(sp, sp, int32_t(stackAdjustment));
+  // 3. 恢复 s1 (x9)
+  if (savedGpMask & Support::bitMask(9)) {
+    emitter->ld(regs::x9, Mem(sp, offset));
+    offset += 8;
   }
 
-  emitter->jalr(regs::x0, ra, 0);
+  // 4. 恢复 s2-s11 (x18-x27)
+  for (uint32_t regId = 18; regId <= 27; regId++) {
+    if (savedGpMask & Support::bitMask(regId)) {
+      Gp reg = Gp::make_x(regId);
+      emitter->ld(reg, Mem(sp, offset));
+      offset += 8;
+    }
+  }
+
+  emitter->addi(sp, sp, int32_t(stackSize));
+  emitter->jalr(x0, ra, 0);
   return kErrorOk;
 }
 
