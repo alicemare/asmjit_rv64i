@@ -143,9 +143,9 @@ set(ASMJIT_NO_COMPILER      "${ASMJIT_NO_COMPILER}"      CACHE BOOL "Disable Com
 set(ASMJIT_INCLUDE_DIRS "${ASMJIT_DIR}/src")     # Include directory is the same as source dir.
 set(ASMJIT_DEPS "")                              # AsmJit dependencies (libraries) for the linker.
 set(ASMJIT_LIBS "")                              # Dependencies of libs/apps that want to use AsmJit.
-set(ASMJIT_CFLAGS "")                            # Public compiler flags.
-set(ASMJIT_PRIVATE_CFLAGS "")                    # Private compiler flags independent of build type.
-set(ASMJIT_PRIVATE_CFLAGS_DBG "")                # Private compiler flags used by debug builds.
+set(ASMJIT_CFLAGS "-g")                            # Public compiler flags.
+set(ASMJIT_PRIVATE_CFLAGS "-g")                    # Private compiler flags independent of build type.
+set(ASMJIT_PRIVATE_CFLAGS_DBG "-g")                # Private compiler flags used by debug builds.
 set(ASMJIT_PRIVATE_CFLAGS_REL "")                # Private compiler flags used by release builds.
 set(ASMJIT_SANITIZE_CFLAGS "")                   # Compiler flags required by currently enabled sanitizers.
 set(ASMJIT_SANITIZE_LFLAGS "")                   # Linker flags required by currently enabled sanitizers.

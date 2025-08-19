@@ -105,11 +105,13 @@ enum class OffsetType : uint8_t {
   kAArch32_1To24At0_0At24,
 
   //! RISCV Load
-  kRISCV64_I_Lo12,
+  kRISCV64_I_Lo12,  //12
 
   //! RISCV Auipc + Lui
-  kRISCV64_U_Hi20,
+  kRISCV64_U_Hi20,  //13
 
+
+  kRISCV64_AUIPC_LD, //14
   //! RISCV Branch
   kRISCV64_BType,
 

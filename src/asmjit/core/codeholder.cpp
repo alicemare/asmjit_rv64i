@@ -949,6 +949,7 @@ ASMJIT_API Error CodeHolder::bindLabel(const Label& label, uint32_t toSectionId,
 
       // Overwrite a real displacement in the CodeBuffer.
       if (!CodeWriterUtils::writeOffset(buf._data + fromOffset, displacement, fixup->format)) {
+        printf("failed!\n");
         err = DebugUtils::errored(kErrorInvalidDisplacement);
         fixup->labelOrRelocId = labelId;
         it.next();
@@ -1187,6 +1188,7 @@ Error CodeHolder::relocateToBase(uint64_t baseAddress, RelocationSummary* summar
     }
 
     uint64_t value = re->payload();
+    printf("payload: %lu\n", value);
     uint64_t sectionOffset = sourceSection->offset();
     uint64_t sourceOffset = re->sourceOffset();
 
@@ -1224,6 +1226,8 @@ Error CodeHolder::relocateToBase(uint64_t baseAddress, RelocationSummary* summar
 
       case RelocType::kAbsToRel: {
         value -= baseAddress + sectionOffset + sourceOffset + regionSize;
+        printf("baseAddress: %lu, sectionOffset: %lu, sourceOffset: %lu, regionSize: %lu, value: %lu\n", baseAddress, sectionOffset, sourceOffset, regionSize, value);
+        //baseAddress: 7F919A660040, sectionOffset: 0, sourceOffset: 0, regionSize: 4, value: FFFF806E6599FFBC
 
         // Sign extend as we are not interested in the high 32-bit word in a 32-bit address space.
         if (addressSize <= 4) {

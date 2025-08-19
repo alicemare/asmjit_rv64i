@@ -168,6 +168,8 @@ public:
   Error loadImm(const Gp& dst, int64_t val) {
     Mem constAddr = newConst(ConstPoolScope::kGlobal, &val, sizeof(val));
     return ld(dst, constAddr);
+    auipc(regs::x15, Imm(0));
+    ld(regs::x15, Mem::ptr(regs::x15, 20));
   }
 
   //! \}

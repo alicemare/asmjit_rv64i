@@ -219,34 +219,39 @@ bool CodeWriterUtils::encodeOffset32(uint32_t* dst, int64_t offset64, const Offs
 
     // I-Type 指令重定位
     case OffsetType::kRISCV64_I_Lo12: {
+      printf("lo12 offset %ld\n", offset64);
       // 参数检查: 值大小为4字节, 12位立即数, 无位移
-      if (format.valueSize() != 4 || bitCount != 12 || bitShift != 0) {
+      if (format.valueSize() != 4 || bitCount != 12 || bitShift != 20) {
           return false;
       }
 
       // 检查偏移量是否在12位有符号范围内 [-2048, 2047]
       if (offset64 < -2048 || offset64 > 2047) {
-          return false;
+        return false;
       }
 
-      printf("RISCV-I Type Offset64: %ld\n", offset64);
-
-      // 提取低12位 (包括符号位)
-      uint32_t imm = static_cast<uint32_t>(offset64) & 0xFFF;
-
-      // 清除目标指令中的立即数字段 (位[31:20])
+      // 提取低 12 位（带符号扩展）
+      int32_t lo12 = offset64 & 0xFFF;
+      if (lo12 & 0x800) {
+        // 如果第 12 位为 1，进行符号扩展
+        lo12 |= 0xFFFFF000;
+      }
+      
+      // 清除指令中的立即数字段 [31:20]
       *dst &= 0x000FFFFF;
+      
+      // 将立即数写入 [31:20]
+      *dst |= ((uint32_t(lo12) & 0xFFF) << 20);
+      printf("offset code %x, opcode %x\n", lo12, *dst);
 
-      // 将立即数写入指令的 [31:20] 位置
-      *dst |= (imm << 20);
-
+      
       return true;
     }
 
     // U-Type 指令重定位 (e.g., auipc, lui)
     case OffsetType::kRISCV64_U_Hi20: {
-      // 参数检查: 值大小为4字节, 20位立即数, 无位移
-      if (format.valueSize() != 4 || bitCount != 20 || bitShift != 0) {
+      printf("RISCV-U Type: offset=%ld\n", offset64);
+      if (format.valueSize() != 4 || bitCount != 20 || bitShift != 12) {
           return false;
       }
 
@@ -255,21 +260,54 @@ bool CodeWriterUtils::encodeOffset32(uint32_t* dst, int64_t offset64, const Offs
           offset64 > 0x7FFFFFFF) {
           return false;
       }
-
-      printf("RISCV-U Type Offset64: %ld\n", offset64);
-
-      // 将偏移量转为32位表示 (保留二进制补码)
-      uint32_t offset32 = static_cast<uint32_t>(offset64);
-
-      // 提取高20位 (偏移量的 [31:12])
-      uint32_t imm = (offset32 >> 12) & 0xFFFFF;
+      int64_t adjusted_offset = offset64;
+  
+      // 提取调整后的高 20 位
+      uint32_t hi20 = (offset64 >> 12) & 0xFFFFF;
 
       // 清除目标指令中的立即数字段 (位[31:12])
       *dst &= 0x00000FFF;
 
       // 将立即数写入指令的 [31:12] 位置
-      *dst |= (imm << 12);
+      *dst |= (hi20 << 12);
+      printf("offset code %x, opcode %x\n", hi20, *dst);
 
+      return true;
+    }
+
+
+    // 新增：RISC-V AUIPC+LD 组合处理
+    case OffsetType::kRISCV64_AUIPC_LD: {
+      printf("Processing RISCV AUIPC+LD fixup: offset64=%ld (0x%lx)\n", offset64, offset64);
+      
+      // dst 指向 AUIPC 指令
+      uint32_t* auipc_ptr = dst;
+      uint32_t* ld_ptr = dst + 1;  // LD 指令在 AUIPC 后 4 字节
+      
+      // 计算高 20 位和低 12 位
+      int64_t adjusted_offset = offset64;
+      
+      // 如果低 12 位会被符号扩展为负数，需要调整高位
+      if (offset64 & 0x800) {
+        adjusted_offset += 0x1000;
+      }
+      
+      uint32_t hi20 = (adjusted_offset >> 12) & 0xFFFFF;
+      uint32_t lo12 = offset64 & 0xFFF;
+      
+      // 更新 AUIPC 指令的立即数（位 [31:12]）
+      uint32_t auipc = *auipc_ptr;
+      auipc = (auipc & 0x00000FFF) | (hi20 << 12);
+      *auipc_ptr = auipc;
+      
+      // 更新 LD 指令的立即数（位 [31:20]）
+      uint32_t ld = *ld_ptr;
+      ld = (ld & 0x000FFFFF) | (lo12 << 20);
+      *ld_ptr = ld;
+      
+      printf("Updated AUIPC: 0x%08x (hi20=0x%x)\n", auipc, hi20);
+      printf("Updated LD: 0x%08x (lo12=0x%x)\n", ld, lo12);
+      
       return true;
     }
     default:
@@ -332,10 +370,19 @@ bool CodeWriterUtils::encodeOffset64(uint64_t* dst, int64_t offset64, const Offs
 }
 
 bool CodeWriterUtils::writeOffset(void* dst, int64_t offset64, const OffsetFormat& format) noexcept {
+  // 特殊处理 AUIPC+LD 组合
+  if (format.type() == OffsetType::kRISCV64_AUIPC_LD) {
+    // 对于 AUIPC+LD，我们需要处理 8 字节（两条指令）
+    uint32_t* instructions = static_cast<uint32_t*>(dst);
+    return encodeOffset32(instructions, offset64, format);
+  }
+    
+  dst = static_cast<char*>(dst) + format.valueOffset();
+
   // Offset the destination by ValueOffset so the `dst` points to the
   // patched word instead of the beginning of the patched region.
   dst = static_cast<char*>(dst) + format.valueOffset();
-
+  //printf("dst %p, offset64: %ld, switch: %d\n", dst, offset64, format.valueSize());
   switch (format.valueSize()) {
     case 1: {
       uint32_t mask;
@@ -359,7 +406,9 @@ bool CodeWriterUtils::writeOffset(void* dst, int64_t offset64, const OffsetForma
 
     case 4: {
       uint32_t mask;
+      printf("case4\n");
       if (!encodeOffset32(&mask, offset64, format)) {
+      printf("case4 failed\n");
         return false;
       }
 

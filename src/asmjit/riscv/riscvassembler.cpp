@@ -126,37 +126,36 @@ Error Assembler::_emit(InstId instId, const Operand_& o0, const Operand_& o1, co
       if (info.hasFlag(InstDB::kIsLoad)) {
         rd_id = o0.as<Gp>().id();
         const Mem& mem = o1.as<Mem>();
-        printf("LabelId: %d, BaseReg: %d, Offset: %ld\n", mem.baseId(), mem.baseReg().id(), mem.offset());
-        if (!mem.hasBaseReg()) {
-          // This pattern is a memory operand that is a pure label reference,
-          // without any base register. This signifies a constant pool load.
-          // genearte 2 instructions: auipc dst, hi20 + ld dst, lo12(dst)
-          LabelEntry le = _code->labelEntry(mem.baseId());
-          // AUIPC
+        if (!mem.hasBaseReg()) {  // todo
+          ASMJIT_PROPAGATE(writer.ensureSpace(this, 8));
+          printf("Processing constAddr with label!\n");
+          LabelEntry& le = _code->labelEntry(o1.as<Label>());
+          // 为 AUIPC+LD 组合创建特殊的 fixup
           size_t auipcOffset = writer.offsetFrom(_bufferData);
-          OffsetFormat auipcFormat;
-          auipcFormat.resetToImmValue(OffsetType::kRISCV64_U_Hi20, 4, 12, 20, 0);
+                
+          // 使用新的组合类型
+          OffsetFormat format;
+          format._type = OffsetType::kRISCV64_AUIPC_LD;
+          format._flags = 0;
+          format._regionSize = 8;    // 两条指令共 8 字节
+          format._valueSize = 4;      // 每条指令 4 字节
+          format._valueOffset = 0;
+          format._immBitCount = 32;   // 完整的 32 位偏移
+          format._immBitShift = 0;
+          format._immDiscardLsb = 0;
 
-          // create fixup for auipc
-          RelocEntry* auipc_re;
-          err = _code->newRelocEntry(&auipc_re, RelocType::kAbsToRel);
-          auipc_re->_sourceSectionId = _section->sectionId();
-          auipc_re->_sourceOffset = auipcOffset;
-          auipc_re->_format = auipcFormat;
-          writer.emit32uLE(info.opcode() | (uint32_t(rd_id) << 7) | (uint32_t(0) << 12));
-          err = writer.ensureSpace(this, 4);
+          Fixup* fixup = _code->newFixup(le, _section->sectionId(), auipcOffset, 0, format);
 
-          // LD
-          size_t ldOffset = writer.offsetFrom(_bufferData);
-          OffsetFormat ldFormat;
-          ldFormat.resetToImmValue(OffsetType::kRISCV64_I_Lo12, 4, 0, 12, 0);
+          // 发射占位指令
+          uint32_t auipc_opcode = 0b0010111 | (rd_id << 7);  // AUIPC rd, 0
+          writer.emit32uLE(auipc_opcode);
 
-          // create fixup for ld
-          RelocEntry* ld_re;
-          err = _code->newRelocEntry(&ld_re, RelocType::kAbsToRel);
-          ld_re->_sourceSectionId = _section->sectionId();
-          ld_re->_sourceOffset = ldOffset;
-          ld_re->_format = ldFormat;
+          uint32_t ld_opcode = 0b0000011 | (rd_id << 7) | (0b011 << 12) | (rd_id << 15);  // LD rd, 0(rd)
+          writer.emit32uLE(ld_opcode);
+
+          //printf("Created AUIPC+LD fixup at offset %zu for label %u\n", auipcOffset, le.id());
+          goto EmitDone;
+
         } else {
           rs1_id = mem.baseId();
           imm12 = uint32_t(mem.offset());
@@ -277,6 +276,7 @@ Error Assembler::_emit(InstId instId, const Operand_& o0, const Operand_& o1, co
                (imm11 << 20) |
                (imm10_1 << 21) |
                (imm20 << 31);
+      printf("auipc opcode: %x\n", opcode);
       break;
     }
 
@@ -293,6 +293,11 @@ Error Assembler::_emit(InstId instId, const Operand_& o0, const Operand_& o1, co
   resetState();
   writer.done(this);
 
+  return err;
+
+EmitDone:
+  resetState();
+  writer.done(this);
   return err;
 }
 
