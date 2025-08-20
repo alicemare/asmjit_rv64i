@@ -106,14 +106,17 @@ public:
 // ==========================
 
 // RISC-V instruction control flow type analysis
-static InstControlFlow getControlFlowType(InstId instId) noexcept {
-  switch (BaseInst::extractRealId(instId)) {
+static InstControlFlow getControlFlowType(const InstNode* inst) noexcept {
+  InstId realInstId = BaseInst::extractRealId(inst->id());
+  switch (realInstId) {
 
     case Inst::kIdJal: // todo, 区分 kCall 和 kJump, kRet,
       return InstControlFlow::kCall;
 
     case Inst::kIdJalr:
-      // todo，需要根据目标寄存器来判断，如果目标是ra则是调用，如果是零寄存器则是跳转
+      if (inst->isInvoke()) {
+        return InstControlFlow::kCall;
+      }
       return InstControlFlow::kReturn;
     case Inst::kIdBeq:
     case Inst::kIdBne:
@@ -252,7 +255,7 @@ Error RACFGBuilder::onInst(InstNode* inst, InstControlFlow& controlType, RAInstB
       }
     }
 
-    controlType = getControlFlowType(instId);
+    controlType = getControlFlowType(inst);
   }
 
   return kErrorOk;

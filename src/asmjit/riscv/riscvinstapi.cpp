@@ -137,9 +137,8 @@ Error queryRWInfo(const BaseInst& inst, const Operand_* operands, size_t opCount
     else {
       const Mem& memOp = srcOp.as<Mem>();
 
-      if (memOp.hasBase()) {
+      if (memOp.hasBase()) { // set Mem Operand's baseReg to Read
         op.addOpFlags(OpRWFlags::kMemBaseRead);
-        // RISC-V doesn't have pre/post increment addressing modes
       }
 
       // RISC-V doesn't support index registers in memory operands

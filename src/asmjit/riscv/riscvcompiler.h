@@ -178,7 +178,28 @@ public:
   //! \{
 
   ASMJIT_INLINE_NODEBUG Error invoke_(InvokeNode** out, const Operand_& target, const FuncSignature& signature) {
-    return addInvokeNode(out, Inst::kIdJalr, target, signature);
+    InvokeNode* invokeNode;
+    Error err = kErrorOk;
+
+    ASMJIT_PROPAGATE(addInvokeNode(&invokeNode, Inst::kIdJalr, target, signature));
+    if (target.isGp())  {
+      // jalr ra, 0(target)
+      invokeNode->setOpCount(2);
+      invokeNode->setOp(0, regs::ra);
+      invokeNode->setOp(1, target);
+    } else if (target.isImm()) {
+      Gp addr = newInt64("tmpaddr");
+      loadImm(addr, target.as<Imm>().value());
+      invokeNode->setOpCount(2);
+      invokeNode->setOp(0, regs::ra);
+      invokeNode->setOp(1, addr);
+    } else {
+      printf("not support invoke target type\n");
+      err = DebugUtils::errored(kErrorInvalidState);
+    }
+
+    if (out) *out = invokeNode;
+    return err;
   }
 
   ASMJIT_INLINE_NODEBUG Error invoke(InvokeNode** out, const Gp& target, const FuncSignature& signature) { return invoke_(out, target, signature); }
