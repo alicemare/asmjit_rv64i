@@ -85,8 +85,8 @@ struct EmitterExplicitT {
 
   ASMJIT_INST_2x(jal, Jal, Gp, Label)
 
-  ASMJIT_INST_2x(adr, Adr, Gp, Label)
-  ASMJIT_INST_2x(adr, Adr, Gp, Mem)
+  //ASMJIT_INST_2x(adr, Adr, Gp, Label)
+  //ASMJIT_INST_2x(adr, Adr, Gp, Mem)
 
 //  inline Error ret() { return _emitter()->_emitI(Inst::kIdJalr, regs::x0, regs::ra, Imm(0)); }
   inline Error nop() { return _emitter()->_emitI(Inst::kIdNop); }

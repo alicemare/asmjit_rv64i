@@ -138,38 +138,12 @@ public:
   //! for further use. It makes very little sense to use it for anything else. The semantics of this instruction
   //! is the same as X86 `LEA` (load effective address) instruction.
   Error loadAddressOf(const Gp& dst, const Mem& mem) {
-    Gp dstX = Gp::make_x(dst.id());
-    // dst 必须是 x 寄存器
-    if (!mem.hasBaseReg()) {  // move offset to dst
-      return mov(dstX, Imm(mem.offset()));
-    }
-
-    int64_t val = mem.offset();
-    const Gp& baseReg = Gp::make_x(mem.baseId());
-    if (val == 0) { // move baseReg to dst
-      return addi(dstX, baseReg, Imm(0));
-    }
-
-    if (val >= -2048 && val < 2048) {
-      return addi(dst, baseReg, Imm(val));
-    }
-
-    // 超过 12位 Imm, 需要分解
-    if (dstX.id() != baseReg.id()) {
-      // 可以使用 dst 作为临时寄存器
-      ASMJIT_PROPAGATE(li(dstX, val));
-      return add(dstX, dstX, baseReg);
-    } else {
-      printf("Have not support!");
-      return DebugUtils::errored(kErrorInvalidState);
-    }
+    return _emitter()->_emitI(Inst::kIdAdr, dst, mem);
   }
 
   Error loadImm(const Gp& dst, int64_t val) {
     Mem constAddr = newConst(ConstPoolScope::kGlobal, &val, sizeof(val));
     return ld(dst, constAddr);
-    auipc(regs::x15, Imm(0));
-    ld(regs::x15, Mem::ptr(regs::x15, 20));
   }
 
   //! \}

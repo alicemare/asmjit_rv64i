@@ -222,6 +222,10 @@ Error RACFGBuilder::onInst(InstNode* inst, InstControlFlow& controlType, RAInstB
             }
           }
           else if (mem.hasBaseReg()) {
+            if (instId == Inst::kIdAdr && i == 1) {
+              // Adr dst, mem, mem should not be consider to use
+              continue;
+            }  
             uint32_t vIndex = Operand::virtIdToIndex(mem.baseId());
             if (vIndex < Operand::kVirtIdCount) {
               RAWorkReg* workReg;
@@ -681,10 +685,48 @@ ASMJIT_FAVOR_SPEED Error RISCVRAPass::_rewrite(BaseNode* first, BaseNode* stop) 
       }
 
       // Handle RISC-V specific instructions
-      // RISC-V doesn't have a direct equivalent to ARM's `adr` instruction
-      // So we don't need the special handling for address loading
+      // Rewrite `loadAddressOf(Gp, Mem)` construct.
+      if (inst->realId() == Inst::kIdAdr && inst->opCount() == 2 && inst->op(1).isMem()) {
+        printf("hack Adr!!!!!!\n");
+        BaseMem mem = inst->op(1).as<BaseMem>();
+        int64_t offset = mem.offset();
+
+        if (!mem.hasBaseOrIndex()) {
+          if (offset >= -2048 && offset <= 2047) {
+            inst->setId(Inst::kIdAddi);
+            inst->setOpCount(3);
+            inst->setOp(1, regs::zero);
+            inst->setOp(2, Imm(offset));
+          } else {
+            printf("not support for now!");
+            // [TODO] 可以在 Assembler 级别加一个 Li 伪指令
+            return DebugUtils::errored(kErrorInvalidState);
+          }
+        }
+        else {
+          if (mem.hasIndex()) {
+            return DebugUtils::errored(kErrorInvalidAddressIndex);
+          }
+
+          // Gp dst = Gp::make_x(inst->op(0).as<Gp>().id());
+          Gp base = Gp::make_x(mem.baseId());
+
+          inst->setId(Inst::kIdAddi);
+          inst->setOpCount(3);
+          inst->setOp(1, base);
+          inst->setOp(2, Imm(offset));
+
+          // Use two operations if the offset cannot be encoded with ADD/SUB.
+          if (offset < -2048 || offset > 2047) {
+            printf("not support for now!");
+            // [TODO] 先给 inst->prev() 发射一个 Add 再几条 Addi
+            return DebugUtils::errored(kErrorInvalidState);
+          }
+        }
+      }
+
+      // Hack InvokeNode's Op for JALR
       if (inst->realId() == Inst::kIdJalr && inst->opCount() == 1 && inst->op(0).isReg()) {
-        // hack func call
         auto target = inst->op(0).as<Reg>(); // phy reg id
         inst->operands()[0] = regs::ra;
         inst->operands()[1] = target;

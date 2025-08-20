@@ -14,14 +14,14 @@ namespace InstDB {
 
 #ifndef ASMJIT_NO_TEXT
 
-const InstNameIndex InstDB::instNameIndex = {
+const InstNameIndex instNameIndex = {
   {
     { Inst::Id::kIdNone, Inst::Id::kIdCount },   // 'a'
   },
   6
 };
 
-const char InstDB::_instNameStringTable[] = {
+const char _instNameStringTable[] = {
   "None  "
   "Add   "
   "Addw  "
@@ -77,7 +77,7 @@ const char InstDB::_instNameStringTable[] = {
   "Adr   "
 };
 
-const uint32_t InstDB::_instNameIndexTable[] = {
+const uint32_t _instNameIndexTable[] = {
   0,
   6,
   12,
@@ -139,7 +139,7 @@ const uint32_t InstDB::_instNameIndexTable[] = {
 // common operand read/write patterns.
 enum OpRWInfoIndex : uint16_t {
   kRWI_RRR = 0,      // B, J
-  kRWI_WRR,          // R, I, U
+  kRWI_WRR,          // R, I, U and Adr
   kRWI_RWR,          // S
 };
 
@@ -175,7 +175,7 @@ static constexpr InstInfo J(uint32_t opcode, uint16_t rwInfoIndex, uint16_t flag
 
 // A helper to pesudo Insturction info.
 static constexpr InstInfo P(uint32_t opcode, uint16_t rwInfoIndex, uint16_t flags = 0) noexcept {
-  return InstInfo { uint32_t(EncodingType::kNone), opcode, 0, rwInfoIndex, flags };
+  return InstInfo { uint32_t(EncodingType::kNone), opcode, 0, 0, 0, rwInfoIndex, flags };
 }
 
 const InstInfo _instInfoTable[] = {
@@ -242,7 +242,7 @@ const InstInfo _instInfoTable[] = {
   // Others
   I(0b0010011, 0b000, 0b0000000, kRWI_RRR), // kIdNop
   I(0b0001111, 0b000, 0b0000000, kRWI_RRR), // kIdFence
-  P(0b0000000, 0b0000000, kRWI_RRR), // kIdAdr placeholder
+  P(0b0000000, kRWI_WRR), // kIdAdr placeholder
 };
 // ${InstInfo:End}
 }

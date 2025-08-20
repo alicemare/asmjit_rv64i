@@ -297,50 +297,6 @@ public:
   }
 };
 
-// riscv::Compiler - RISCVTest_Adr
-// ===========================
-
-class RISCVTest_Adr : public RISCVTestCase {
-public:
-  RISCVTest_Adr()
-    : RISCVTestCase("Adr") {}
-
-  static void add(TestApp& app) {
-    app.add(new RISCVTest_Adr());
-  }
-
-  virtual void compile(riscv::Compiler& cc) {
-    cc.addFunc(FuncSignature::build<int>());
-
-    riscv::Gp addr = cc.newIntPtr("addr");
-    riscv::Gp val = cc.newIntPtr("val");
-
-    Label L_Table = cc.newLabel();
-
-    cc.adr(addr, L_Table);
-    cc.lw(val, riscv::Mem::ptr(addr, 8));
-    cc.ret(val);
-    cc.endFunc();
-
-    cc.bind(L_Table);
-    cc.embedInt32(1);
-    cc.embedInt32(2);
-    cc.embedInt32(3);
-    cc.embedInt32(4);
-    cc.embedInt32(5);
-  }
-
-  virtual bool run(void* _func, String& result, String& expect) {
-    using Func = int (*)(void);
-    Func func = ptr_as_func<Func>(_func);
-
-    result.assignFormat("ret={%d}", func());
-    expect.assignFormat("ret={%d}", 3);
-
-    return result == expect;
-  }
-};
-
 // riscv::Compiler - RISCVTest_Branch1
 // ===============================
 
@@ -555,6 +511,45 @@ public:
   }
 };
 
+
+// riscv::Compiler - RISCVTest_LoadAddr
+// =================================
+
+class RISCVTest_LoadAddr : public RISCVTestCase {
+public:
+  RISCVTest_LoadAddr()
+    : RISCVTestCase("LoadAddr") {}
+
+  static void add(TestApp& app) {
+    app.add(new RISCVTest_LoadAddr());
+  }
+
+  virtual void compile(riscv::Compiler& cc) {
+    FuncNode* funcNode = cc.addFunc(FuncSignature::build<int64_t*, int64_t>());
+
+    riscv::Gp val = cc.newInt64("val");
+    funcNode->setArg(0, val);
+
+    riscv::Gp addr = cc.newIntPtr("addr");
+    riscv::Mem stack = cc.newStack(8, 8);    // align 8byte mem
+    cc.loadAddressOf(addr, stack);
+    cc.sd(val, riscv::Mem::ptr(addr, 0));
+
+    cc.ret(addr);
+    cc.endFunc();
+  }
+
+  virtual bool run(void* _func, String& result, String& expect) {
+    using Func = int64_t* (*)(int64_t);
+    Func func = ptr_as_func<Func>(_func);
+
+    int64_t val = 233;
+    
+    printf("result=%ld, expected=%ld", *func(val), val);
+    return result == expect;
+  }
+};
+
 class RISCVTest_Const : public RISCVTestCase {
 public:
   RISCVTest_Const()
@@ -707,11 +702,11 @@ void compiler_add_riscv_tests(TestApp& app) {
   app.addT<RISCVTest_GpArgs>();
   app.addT<RISCVTest_ManyRegs>();
   app.addT<RISCVTest_Add>();
-  //app.addT<RISCVTest_Adr>();
   app.addT<RISCVTest_Branch1>();
   app.addT<RISCVTest_Invoke1>();
   app.addT<RISCVTest_Invoke2>();
   app.addT<RISCVTest_Invoke3>();
+  app.addT<RISCVTest_LoadAddr>();
   app.addT<RISCVTest_Const>();
   //app.addT<RISCVTest_JumpTable>();
 }
