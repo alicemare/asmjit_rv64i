@@ -152,7 +152,7 @@ struct InstInfo {
   uint32_t _funct7 : 7; // R-Type func7, I-Type shtyp
   uint32_t _reserved : 7;
 
-  uint16_t _rwInfoIndex;
+  uint32_t _rwInfoIndex;
   uint16_t _flags;
 
   //! \name Accessors

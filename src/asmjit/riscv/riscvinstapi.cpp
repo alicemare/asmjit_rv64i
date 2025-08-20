@@ -77,8 +77,11 @@ struct InstRWInfoData {
 static const InstRWInfoData instRWInfoData[] = {
   #define R uint8_t(OpRWFlags::kRead)
   #define W uint8_t(OpRWFlags::kWrite)
-  #define X uint8_t(OpRWFlags::kRW)
-  {{ W, R, R }}
+  #define X uint8_t(OpRWFlags::kRW)   // RV64I don't have Atomic inst
+
+  {{ R, R, R}}, // kRWI_RRR
+  {{ W, R, R}}, // kRWI_WRR
+  {{ R, W, R}}, // kRWI_RWR
 
   #undef R
   #undef W
@@ -100,7 +103,8 @@ Error queryRWInfo(const BaseInst& inst, const Operand_* operands, size_t opCount
   out->_readFlags = CpuRWFlags::kNone;
   out->_writeFlags = CpuRWFlags::kNone;
 
-  const InstRWInfoData& rwInfo = instRWInfoData[0];
+  const InstDB::InstInfo& instInfo = InstDB::_instInfoTable[realId];
+  const InstRWInfoData& rwInfo = instRWInfoData[instInfo.rwInfoIndex()];
 
   for (uint32_t i = 0; i < opCount; i++) {
     OpRWInfo& op = out->_operands[i];
